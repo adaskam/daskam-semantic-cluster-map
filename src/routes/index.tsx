@@ -725,7 +725,6 @@ function MindMap({
         <span className={cn("size-1.5 rounded-full transition-colors", semanticLevel >= 1 ? "bg-primary" : "bg-muted")} />
         <span className={cn("size-1.5 rounded-full transition-colors", semanticLevel >= 2 ? "bg-primary" : "bg-muted")} />
       </div>
-      </div>
 
 
       <div
