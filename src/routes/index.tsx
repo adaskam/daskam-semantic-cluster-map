@@ -963,6 +963,10 @@ function MindMap({
                 style={{
                   left: a.x,
                   top: a.y,
+                  opacity: articleAlpha * (isDimmed ? 0.3 : 1),
+                  pointerEvents: articleAlpha < 0.2 ? "none" : "auto",
+                  transform: `translate(-50%, -50%) scale(${0.6 + 0.4 * articleAlpha})`,
+                  transition: "opacity 220ms ease, transform 220ms ease",
                   borderColor: isMatch ? color : `color-mix(in oklab, ${color} 40%, transparent)`,
                   ...(isMatch
                     ? {
