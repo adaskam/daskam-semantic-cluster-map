@@ -85,9 +85,32 @@ function probe(dataUrl: string) {
   });
 }
 
+export type LogoPlacement = "left" | "center" | "right";
+export type LogoSize = "s" | "m" | "l";
+
+export type LogoOptions = {
+  dataUrl?: string | null;
+  placement?: LogoPlacement;
+  size?: LogoSize;
+};
+
+async function waitForImages(root: HTMLElement) {
+  const imgs = Array.from(root.querySelectorAll("img"));
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete && img.naturalWidth > 0) return resolve();
+          img.addEventListener("load", () => resolve(), { once: true });
+          img.addEventListener("error", () => resolve(), { once: true });
+        }),
+    ),
+  );
+}
+
 async function renderOffscreen(
   cluster: Cluster,
-  logoDataUrl?: string | null,
+  logo?: LogoOptions,
 ): Promise<{ node: HTMLElement; cleanup: () => void }> {
   const host = document.createElement("div");
   host.style.position = "fixed";
@@ -99,15 +122,24 @@ async function renderOffscreen(
   document.body.appendChild(host);
 
   const root = createRoot(host);
-  root.render(createElement(ClusterReport, { cluster, logoDataUrl }));
+  root.render(
+    createElement(ClusterReport, {
+      cluster,
+      logoDataUrl: logo?.dataUrl ?? null,
+      logoPlacement: logo?.placement ?? "left",
+      logoSize: logo?.size ?? "m",
+    }),
+  );
 
-  // Wait for fonts + a paint
   if (document.fonts && document.fonts.ready) {
     await document.fonts.ready;
   }
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
   const node = host.firstElementChild as HTMLElement;
+  await waitForImages(node);
+  await new Promise((r) => requestAnimationFrame(r));
+
   return {
     node,
     cleanup: () => {
@@ -117,8 +149,8 @@ async function renderOffscreen(
   };
 }
 
-export async function exportPDF(cluster: Cluster, logoDataUrl?: string | null) {
-  const { node, cleanup } = await renderOffscreen(cluster, logoDataUrl);
+export async function exportPDF(cluster: Cluster, logo?: LogoOptions) {
+  const { node, cleanup } = await renderOffscreen(cluster, logo);
 
   try {
     const sections = Array.from(node.querySelectorAll<HTMLElement>("[data-pdf-section]"));

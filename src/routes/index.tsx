@@ -657,6 +657,8 @@ function SidePanel({
   const pillar = cluster?.pillars[active];
   const [exporting, setExporting] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [logoPlacement, setLogoPlacement] = useState<"left" | "center" | "right">("left");
+  const [logoSize, setLogoSize] = useState<"s" | "m" | "l">("m");
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -665,13 +667,14 @@ function SidePanel({
     const reader = new FileReader();
     reader.onload = () => setLogoDataUrl(typeof reader.result === "string" ? reader.result : null);
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handlePdf = async () => {
     if (!cluster) return;
     setExporting(true);
     try {
-      await exportPDF(cluster, logoDataUrl);
+      await exportPDF(cluster, { dataUrl: logoDataUrl, placement: logoPlacement, size: logoSize });
     } finally {
       setExporting(false);
     }
@@ -722,7 +725,7 @@ function SidePanel({
             </DropdownMenu>
           </div>
 
-          <div className="flex items-center gap-2 pt-3 border-t border-border/60">
+          <div className="space-y-2 pt-3 border-t border-border/60">
             <input
               ref={logoInputRef}
               type="file"
@@ -730,33 +733,86 @@ function SidePanel({
               className="hidden"
               onChange={handleLogoChange}
             />
-            {logoDataUrl ? (
-              <>
-                <div className="size-10 rounded-md bg-secondary/60 border border-border/60 grid place-items-center overflow-hidden shrink-0">
-                  <img src={logoDataUrl} alt="Brand logo" className="max-h-8 max-w-9 object-contain" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">PDF cover</p>
-                  <p className="text-xs text-foreground/80 truncate">Logo attached</p>
-                </div>
+            <div className="flex items-center gap-2">
+              {logoDataUrl ? (
+                <>
+                  <div className="size-10 rounded-md bg-secondary/60 border border-border/60 grid place-items-center overflow-hidden shrink-0">
+                    <img src={logoDataUrl} alt="Brand logo" className="max-h-8 max-w-9 object-contain" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">PDF cover</p>
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="text-xs text-foreground/80 hover:text-primary truncate underline-offset-2 hover:underline"
+                    >
+                      Replace logo
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setLogoDataUrl(null)}
+                    className="size-7 grid place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    aria-label="Remove logo"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => setLogoDataUrl(null)}
-                  className="size-7 grid place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  aria-label="Remove logo"
+                  onClick={() => logoInputRef.current?.click()}
+                  className="w-full inline-flex items-center justify-center gap-2 h-9 px-3 rounded-md border border-dashed border-border/80 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-secondary/40 transition-colors"
                 >
-                  <X className="size-3.5" />
+                  <ImagePlus className="size-3.5" />
+                  Add your logo to PDF
                 </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => logoInputRef.current?.click()}
-                className="w-full inline-flex items-center justify-center gap-2 h-9 px-3 rounded-md border border-dashed border-border/80 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-secondary/40 transition-colors"
-              >
-                <ImagePlus className="size-3.5" />
-                Add your logo to PDF
-              </button>
+              )}
+            </div>
+
+            {logoDataUrl && (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-mono text-muted-foreground mb-1">Placement</p>
+                  <div className="flex rounded-md border border-border/60 overflow-hidden">
+                    {(["left", "center", "right"] as const).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setLogoPlacement(p)}
+                        className={cn(
+                          "flex-1 px-2 py-1.5 text-[10px] uppercase tracking-wider font-mono transition-colors",
+                          logoPlacement === p
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-secondary",
+                        )}
+                      >
+                        {p[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-mono text-muted-foreground mb-1">Size</p>
+                  <div className="flex rounded-md border border-border/60 overflow-hidden">
+                    {(["s", "m", "l"] as const).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setLogoSize(s)}
+                        className={cn(
+                          "flex-1 px-2 py-1.5 text-[10px] uppercase tracking-wider font-mono transition-colors",
+                          logoSize === s
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-secondary",
+                        )}
+                      >
+                        {s.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
