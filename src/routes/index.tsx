@@ -717,6 +717,16 @@ function MindMap({
         Scroll to pan · ⌘/Ctrl + scroll to zoom · Space + drag
       </div>
 
+      <div className="pointer-events-none absolute bottom-3 right-3 z-30 flex items-center gap-2 rounded-md border border-border/50 bg-background/70 px-2 py-1 text-[10px] font-mono uppercase tracking-wider backdrop-blur-sm">
+        <span className="text-muted-foreground">Level</span>
+        <span className="text-foreground/90">{levelLabel}</span>
+        <span className="text-muted-foreground/60">·</span>
+        <span className={cn("size-1.5 rounded-full transition-colors", semanticLevel >= 0 ? "bg-primary" : "bg-muted")} />
+        <span className={cn("size-1.5 rounded-full transition-colors", semanticLevel >= 1 ? "bg-primary" : "bg-muted")} />
+        <span className={cn("size-1.5 rounded-full transition-colors", semanticLevel >= 2 ? "bg-primary" : "bg-muted")} />
+      </div>
+      </div>
+
 
       <div
         className="absolute top-0 left-0 origin-top-left select-none"
