@@ -822,43 +822,16 @@ function SidePanel({
       )}
 
 
-      {cluster?.mode === "gap" && cluster.gapSummary && (
-        <div className="node-card p-5 border-primary/40">
-          <div className="flex items-center gap-2 mb-2">
-            <Target className="size-4 text-primary" />
-            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-primary">
-              Intent gap summary
-            </p>
-          </div>
-          <p className="text-sm leading-relaxed text-foreground/90">{cluster.gapSummary}</p>
-        </div>
-      )}
-
       <div className="node-card p-5">
         <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
           Active cluster
         </p>
         {pillar ? (
           <>
-            <div className="flex items-start justify-between gap-3 mt-1">
-              <h3 className="text-xl font-semibold leading-tight">{pillar.title}</h3>
-              {pillar.intent && (
-                <span className="shrink-0 mt-1 text-[10px] uppercase tracking-wider font-mono px-2 py-0.5 rounded-md bg-primary/15 text-primary border border-primary/30">
-                  {pillar.intent}
-                </span>
-              )}
-            </div>
+            <h3 className="text-xl font-semibold mt-1 leading-tight">{pillar.title}</h3>
             <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
               {pillar.description}
             </p>
-            {pillar.opportunity && (
-              <div className="mt-3 pt-3 border-t border-border/60">
-                <p className="text-[10px] uppercase tracking-[0.18em] font-mono text-accent mb-1">
-                  Opportunity
-                </p>
-                <p className="text-sm leading-relaxed text-foreground/90">{pillar.opportunity}</p>
-              </div>
-            )}
           </>
         ) : (
           <p className="text-sm text-muted-foreground mt-2">
@@ -866,6 +839,7 @@ function SidePanel({
           </p>
         )}
       </div>
+
 
 
       <div className="node-card p-5">
