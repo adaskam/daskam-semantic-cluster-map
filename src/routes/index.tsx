@@ -404,7 +404,7 @@ function HeroSection({
             </div>
           </div>
         </form>
-      ) : (
+      ) : mode === "gap" ? (
         <form onSubmit={onGapSubmit} className="mt-6 flex flex-col gap-4 text-left">
           <div className="grid gap-2">
             <label htmlFor="gap-url" className="text-sm font-medium text-muted-foreground">
@@ -470,9 +470,56 @@ function HeroSection({
             )}
           </Button>
         </form>
+      ) : (
+        <form onSubmit={onTextSubmit} className="mt-6 flex flex-col gap-4 text-left">
+          <div className="grid gap-2">
+            <label htmlFor="text-label" className="text-sm font-medium text-muted-foreground">
+              Corpus label <span className="text-muted-foreground/60 font-normal">(optional)</span>
+            </label>
+            <Input
+              id="text-label"
+              value={textLabel}
+              onChange={(e) => setTextLabel(e.target.value)}
+              placeholder="e.g. Q3 user interview notes, Twitter mentions, product reviews"
+              className="h-12 bg-input border-border focus-visible:ring-primary"
+              disabled={isPending}
+            />
+          </div>
+          <div className="grid gap-2">
+            <label htmlFor="text-blobs" className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+              <span>
+                Text snippets <span className="text-destructive">*</span>
+              </span>
+              <span className="text-xs text-muted-foreground/70">{blobCount} snippet{blobCount === 1 ? "" : "s"} detected</span>
+            </label>
+            <Textarea
+              id="text-blobs"
+              value={textBlobs}
+              onChange={(e) => setTextBlobs(e.target.value)}
+              placeholder={"Paste paragraphs, tweets, reviews, or notes.\n\nSeparate each snippet with a blank line — or just one per line.\n\nUp to 80 snippets will be clustered."}
+              className="min-h-[220px] bg-input border-border focus-visible:ring-primary font-mono text-sm"
+              disabled={isPending}
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={isPending || blobCount < 4}
+            className="h-14 px-8 text-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+          >
+            {isPending ? (
+              <><Loader2 className="size-5 animate-spin" /> Clustering text…</>
+            ) : (
+              <><FileText className="size-5 mr-1" /> Cluster text semantically</>
+            )}
+          </Button>
+          {blobCount > 0 && blobCount < 4 && (
+            <p className="text-xs text-muted-foreground text-center">Add at least 4 snippets to cluster.</p>
+          )}
+        </form>
       )}
     </div>
   );
+
 }
 
 
