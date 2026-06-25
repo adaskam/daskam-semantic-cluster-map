@@ -113,7 +113,7 @@ export function EditExportDialog({ open, onOpenChange, cluster }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl p-0 gap-0 max-h-[92vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[1400px] w-[95vw] p-0 gap-0 max-h-[92vh] overflow-hidden flex flex-col">
         <DialogHeader className="px-6 pt-5 pb-4 border-b border-border/60 shrink-0">
           <DialogTitle className="text-xl">Review & edit before export</DialogTitle>
           <DialogDescription>
