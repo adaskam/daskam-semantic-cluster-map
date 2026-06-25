@@ -17,16 +17,16 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Cluster Cartographer — Semantic Content Mind-Mapper" },
+      { title: "Semantic Cluster Map — A cartographer for your keyword strategy" },
       {
         name: "description",
         content:
-          "Generate an interactive mind-map of SEO content pillars, article ideas, keywords, and internal linking strategy from a single primary topic.",
+          "Generate an interactive map of SEO content pillars, article ideas, keywords, and internal linking strategy from a single primary topic.",
       },
-      { property: "og:title", content: "Cluster Cartographer" },
+      { property: "og:title", content: "Semantic Cluster Map" },
       {
         property: "og:description",
-        content: "AI-powered semantic content cluster mind-mapper for SEO strategists.",
+        content: "A cartographer for your keyword strategy — AI-powered semantic content clusters for SEO.",
       },
     ],
   }),
@@ -183,8 +183,8 @@ function Header({
             <Network className="size-5 text-primary-foreground" />
           </div>
           <div className="hidden sm:block">
-            <h1 className="text-base font-semibold leading-none">Cluster Cartographer</h1>
-            <p className="text-xs text-muted-foreground mt-1">Semantic content mind-mapper</p>
+            <h1 className="text-base font-semibold leading-none">Semantic Cluster Map</h1>
+            <p className="text-xs text-muted-foreground mt-1">A cartographer for your keyword strategy</p>
           </div>
         </div>
 
