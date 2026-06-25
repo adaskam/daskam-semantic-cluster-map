@@ -160,17 +160,31 @@ function Index() {
             setGoals={setGoals}
             competitors={competitors}
             setCompetitors={setCompetitors}
+            textLabel={textLabel}
+            setTextLabel={setTextLabel}
+            textBlobs={textBlobs}
+            setTextBlobs={setTextBlobs}
             onTopicSubmit={onTopicSubmit}
             onGapSubmit={onGapSubmit}
+            onTextSubmit={onTextSubmit}
             isPending={activeMutation.isPending}
           />
         )}
 
         {activeMutation.isPending && (
           <section className="node-card relative overflow-hidden min-h-[760px] w-full">
-            <LoadingState topic={mode === "topic" ? topic : `${url} — intent gap analysis`} />
+            <LoadingState
+              topic={
+                mode === "topic"
+                  ? topic
+                  : mode === "gap"
+                    ? `${url} — intent gap analysis`
+                    : textLabel || "your text corpus"
+              }
+            />
           </section>
         )}
+
 
         {activeMutation.isError && !cluster && (
           <section className="node-card relative overflow-hidden min-h-[760px] w-full grid place-items-center p-8 text-center">
