@@ -4,8 +4,15 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { generateCluster, type Cluster } from "@/lib/cluster.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Download, FileText, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { exportMarkdown, exportPDF } from "@/lib/export-strategy";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/")({
   head: () => ({
