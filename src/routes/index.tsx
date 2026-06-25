@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { generateCluster, type Cluster } from "@/lib/cluster.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -312,10 +312,11 @@ function MindMap({
   const [fitScale, setFitScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
+  const [isSpaceDown, setIsSpaceDown] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number; mode: "grab" | "space" } | null>(null);
 
-  const MIN_ZOOM = 0.5;
-  const MAX_ZOOM = 3;
+  const MIN_ZOOM = 0.2;
+  const MAX_ZOOM = 4;
   const STEP = 0.2;
 
   useLayoutEffect(() => {
@@ -331,39 +332,64 @@ function MindMap({
     return () => ro.disconnect();
   }, []);
 
-  const finalScale = fitScale * zoom;
-  const scaledW = STAGE.w * finalScale;
-  const scaledH = STAGE.h * finalScale;
-  const viewW = containerRef.current?.clientWidth ?? STAGE.w;
-  const viewH = STAGE.h * fitScale;
-
-  const clampPan = (next: { x: number; y: number }) => {
-    const minX = Math.min(0, viewW - scaledW);
-    const minY = Math.min(0, viewH - scaledH);
-    return {
-      x: Math.max(minX, Math.min(0, next.x)),
-      y: Math.max(minY, Math.min(0, next.y)),
+  // Track spacebar (Figma-style: hold space to pan)
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) {
+        e.preventDefault();
+        setIsSpaceDown(true);
+      }
     };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === "Space") setIsSpaceDown(false);
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, []);
+
+  const finalScale = fitScale * zoom;
+
+  // Zoom centered on a client point (Figma-style cursor-anchored zoom)
+  const zoomAt = (nextZoom: number, clientX?: number, clientY?: number) => {
+    const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
+    const el = containerRef.current;
+    if (!el || clientX == null || clientY == null) {
+      onZoomChange(clamped);
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const cx = clientX - rect.left;
+    const cy = clientY - rect.top;
+    const oldScale = fitScale * zoom;
+    const newScale = fitScale * clamped;
+    // keep the world point under cursor fixed
+    setPan({
+      x: cx - ((cx - pan.x) * newScale) / oldScale,
+      y: cy - ((cy - pan.y) * newScale) / oldScale,
+    });
+    onZoomChange(clamped);
   };
 
-  const zoomIn = () => onZoomChange(Math.min(MAX_ZOOM, zoom + STEP));
-  const zoomOut = () => onZoomChange(Math.max(MIN_ZOOM, zoom - STEP));
+  const zoomIn = () => zoomAt(zoom + STEP);
+  const zoomOut = () => zoomAt(zoom - STEP);
   const resetZoom = () => {
     onZoomChange(1);
     setPan({ x: 0, y: 0 });
   };
 
-  const startDrag = (clientX: number, clientY: number) => {
-    dragRef.current = { startX: clientX, startY: clientY, panX: pan.x, panY: pan.y };
+  const startDrag = (clientX: number, clientY: number, mode: "grab" | "space") => {
+    dragRef.current = { startX: clientX, startY: clientY, panX: pan.x, panY: pan.y, mode };
     setIsDragging(true);
   };
 
   const moveDrag = (clientX: number, clientY: number) => {
     const d = dragRef.current;
     if (!d) return;
-    const x = d.panX + (clientX - d.startX);
-    const y = d.panY + (clientY - d.startY);
-    setPan(clampPan({ x, y }));
+    setPan({ x: d.panX + (clientX - d.startX), y: d.panY + (clientY - d.startY) });
   };
 
   const endDrag = () => {
@@ -372,10 +398,16 @@ function MindMap({
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
+    // middle-click or space+left-click always pans
     const target = e.target as HTMLElement;
-    if (target.closest("button, [role='button'], a, input, textarea, select")) return;
-    startDrag(e.clientX, e.clientY);
+    const onInteractive = !!target.closest("button, [role='button'], a, input, textarea, select");
+    if (e.button === 1 || (e.button === 0 && isSpaceDown)) {
+      e.preventDefault();
+      startDrag(e.clientX, e.clientY, "space");
+      return;
+    }
+    if (e.button !== 0 || onInteractive) return;
+    startDrag(e.clientX, e.clientY, "grab");
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -386,7 +418,7 @@ function MindMap({
     const target = e.target as HTMLElement;
     if (target.closest("button, [role='button'], a, input, textarea, select")) return;
     const t = e.touches[0];
-    startDrag(t.clientX, t.clientY);
+    startDrag(t.clientX, t.clientY, "grab");
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -394,13 +426,34 @@ function MindMap({
     moveDrag(t.clientX, t.clientY);
   };
 
+  // Native wheel listener (passive: false so we can preventDefault)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      // Ctrl/Cmd+wheel or pinch (ctrlKey set by trackpad pinch) = zoom; otherwise pan
+      if (e.ctrlKey || e.metaKey) {
+        const factor = Math.exp(-e.deltaY * 0.0015);
+        zoomAt(zoom * factor, e.clientX, e.clientY);
+      } else {
+        setPan((p) => ({ x: p.x - e.deltaX, y: p.y - e.deltaY }));
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel as EventListener);
+  }, [zoom, fitScale, pan.x, pan.y]);
+
+  const cursorClass = isDragging
+    ? "cursor-grabbing"
+    : isSpaceDown
+      ? "cursor-grab"
+      : "cursor-default";
+
   return (
     <div
       ref={containerRef}
-      className={cn(
-        "relative w-full overflow-hidden touch-none",
-        isDragging ? "cursor-grabbing" : "cursor-grab",
-      )}
+      className={cn("relative w-full overflow-hidden touch-none", cursorClass)}
       style={{ height: STAGE.h * fitScale }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -437,10 +490,14 @@ function MindMap({
           type="button"
           onClick={resetZoom}
           className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-          aria-label="Reset zoom"
+          aria-label="Reset view"
         >
           <RotateCcw className="size-4" />
         </button>
+      </div>
+
+      <div className="pointer-events-none absolute bottom-3 left-3 z-30 rounded-md border border-border/50 bg-background/70 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
+        Scroll to pan · ⌘/Ctrl + scroll to zoom · Space + drag
       </div>
 
       <div
