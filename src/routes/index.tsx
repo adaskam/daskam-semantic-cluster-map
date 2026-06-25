@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { generateCluster, type Cluster } from "@/lib/cluster.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles, Link2, KeyRound, Network } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +32,12 @@ const PILLAR_COLORS = [
   "var(--pillar-3)",
   "var(--pillar-4)",
   "var(--pillar-5)",
+];
+
+const EXAMPLE_TOPICS = [
+  "Enterprise Cloud Security",
+  "Sustainable Fashion",
+  "AI for Healthcare",
 ];
 
 const STAGE = { w: 1100, h: 760, cx: 550, cy: 380 };
@@ -83,92 +88,189 @@ function Index() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
-        <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center">
-              <Network className="size-5 text-primary-foreground" />
+      <Header
+        topic={topic}
+        setTopic={setTopic}
+        onSubmit={onSubmit}
+        isPending={mutation.isPending}
+      />
+
+      <main
+        className={cn(
+          "flex-1 p-6 max-w-[1600px] w-full mx-auto",
+          cluster
+            ? "grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6"
+            : "flex flex-col items-center justify-start pt-12 lg:pt-20",
+        )}
+      >
+        {!cluster && !mutation.isPending && !mutation.isError && (
+          <HeroSection
+            topic={topic}
+            setTopic={setTopic}
+            onSubmit={onSubmit}
+            isPending={mutation.isPending}
+          />
+        )}
+
+        {mutation.isPending && (
+          <section className="node-card relative overflow-hidden min-h-[760px] w-full">
+            <LoadingState topic={topic} />
+          </section>
+        )}
+
+        {mutation.isError && !cluster && (
+          <section className="node-card relative overflow-hidden min-h-[760px] w-full grid place-items-center p-8 text-center">
+            <div className="max-w-sm">
+              <p className="text-destructive font-medium mb-2">Couldn't generate cluster</p>
+              <p className="text-sm text-muted-foreground">
+                {(mutation.error as Error)?.message || "Try again in a moment."}
+              </p>
             </div>
-            <div>
-              <h1 className="text-base font-semibold leading-none">Cluster Cartographer</h1>
-              <p className="text-xs text-muted-foreground mt-1">Semantic content mind-mapper</p>
-            </div>
-          </div>
-          <form onSubmit={onSubmit} className="flex-1 flex gap-2 max-w-2xl ml-auto">
-            <div className="relative flex-1">
-              <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary" />
-              <Input
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="Enter a primary topic — e.g. Enterprise Cloud Security"
-                className="pl-10 h-11 bg-input border-border focus-visible:ring-primary"
-                disabled={mutation.isPending}
+          </section>
+        )}
+
+        {cluster && (
+          <>
+            <section className="node-card relative overflow-hidden min-h-[760px]">
+              <MindMap
+                cluster={cluster}
+                positions={positions}
+                active={active}
+                onActiveChange={setActive}
               />
-            </div>
-            <Button
-              type="submit"
-              disabled={mutation.isPending || topic.trim().length < 2}
-              className="h-11 px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
-            >
-              {mutation.isPending ? (
-                <><Loader2 className="size-4 animate-spin" /> Mapping…</>
-              ) : (
-                "Map cluster"
-              )}
-            </Button>
-          </form>
-        </div>
-      </header>
+            </section>
 
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 p-6 max-w-[1600px] w-full mx-auto">
-        <section className="node-card relative overflow-hidden min-h-[760px]">
-          {!cluster && !mutation.isPending && <EmptyState />}
-          {mutation.isPending && <LoadingState topic={topic} />}
-          {mutation.isError && (
-            <div className="absolute inset-0 grid place-items-center p-8 text-center">
-              <div className="max-w-sm">
-                <p className="text-destructive font-medium mb-2">Couldn't generate cluster</p>
-                <p className="text-sm text-muted-foreground">
-                  {(mutation.error as Error)?.message || "Try again in a moment."}
-                </p>
-              </div>
-            </div>
-          )}
-          {cluster && (
-            <MindMap
-              cluster={cluster}
-              positions={positions}
-              active={active}
-              onActiveChange={setActive}
-            />
-          )}
-        </section>
-
-        <aside className="space-y-4">
-          <SidePanel cluster={cluster} active={active} />
-        </aside>
+            <aside className="space-y-4">
+              <SidePanel
+                cluster={cluster}
+                active={active}
+                onActiveChange={setActive}
+              />
+            </aside>
+          </>
+        )}
       </main>
     </div>
   );
 }
 
-function EmptyState() {
+function Header({
+  topic,
+  setTopic,
+  onSubmit,
+  isPending,
+}: {
+  topic: string;
+  setTopic: (t: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isPending: boolean;
+}) {
   return (
-    <div className="absolute inset-0 grid place-items-center p-8 text-center">
-      <div className="max-w-md">
-        <div className="size-16 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center mb-5 animate-pulse-ring">
-          <Network className="size-8 text-primary" />
+    <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
+      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center gap-4 md:gap-6">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center">
+            <Network className="size-5 text-primary-foreground" />
+          </div>
+          <div className="hidden sm:block">
+            <h1 className="text-base font-semibold leading-none">Cluster Cartographer</h1>
+            <p className="text-xs text-muted-foreground mt-1">Semantic content mind-mapper</p>
+          </div>
         </div>
-        <h2 className="text-2xl font-semibold text-glow">Map a content universe</h2>
-        <p className="text-sm text-muted-foreground mt-2">
-          Drop a primary topic above. We'll branch it into pillars, article ideas, keywords,
-          and an internal linking plan you can ship.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-2 justify-center">
-          {["Enterprise Cloud Security", "Sustainable Fashion", "AI for Healthcare"].map((s) => (
-            <Badge key={s} variant="secondary" className="bg-secondary/60 font-mono text-[11px]">
+
+        <form onSubmit={onSubmit} className="flex-1 flex gap-2 max-w-xl ml-auto">
+          <div className="relative flex-1">
+            <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary" />
+            <Input
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="Primary topic — e.g. Enterprise Cloud Security"
+              aria-label="Primary topic"
+              className="pl-10 h-10 bg-input border-border focus-visible:ring-primary"
+              disabled={isPending}
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={isPending || topic.trim().length < 2}
+            className="h-10 px-3 md:px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
+          >
+            {isPending ? (
+              <><Loader2 className="size-4 animate-spin" /> <span className="hidden md:inline">Mapping</span></>
+            ) : (
+              <><Sparkles className="size-4 md:mr-1" /> <span className="hidden md:inline">Map</span></>
+            )}
+          </Button>
+        </form>
+      </div>
+    </header>
+  );
+}
+
+function HeroSection({
+  topic,
+  setTopic,
+  onSubmit,
+  isPending,
+}: {
+  topic: string;
+  setTopic: (t: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isPending: boolean;
+}) {
+  return (
+    <div className="w-full max-w-2xl mx-auto text-center">
+      <div className="size-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center mb-6 animate-pulse-ring">
+        <Network className="size-10 text-primary" />
+      </div>
+
+      <h2 className="text-3xl md:text-4xl font-semibold text-glow">Map a content universe</h2>
+      <p className="text-base text-muted-foreground mt-3 max-w-md mx-auto">
+        Enter a primary topic and we'll generate a complete semantic content cluster: pillars,
+        article ideas, keywords, and internal linking strategy.
+      </p>
+
+      <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-3">
+        <label htmlFor="primary-topic" className="text-sm font-medium text-left md:text-center text-muted-foreground">
+          Primary Topic
+        </label>
+        <div className="relative w-full">
+          <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-primary" />
+          <Input
+            id="primary-topic"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="e.g. Enterprise Cloud Security"
+            aria-label="Primary topic"
+            className="pl-12 h-14 text-lg bg-input border-border focus-visible:ring-primary w-full"
+            disabled={isPending}
+          />
+        </div>
+        <Button
+          type="submit"
+          disabled={isPending || topic.trim().length < 2}
+          className="h-14 px-8 text-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+        >
+          {isPending ? (
+            <><Loader2 className="size-5 animate-spin" /> Mapping…</>
+          ) : (
+            "Generate cluster map"
+          )}
+        </Button>
+      </form>
+
+      <div className="mt-6">
+        <p className="text-xs text-muted-foreground mb-2">Try an example</p>
+        <div className="flex flex-wrap gap-2 justify-center">
+          {EXAMPLE_TOPICS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setTopic(s)}
+              className="inline-flex items-center rounded-md border border-transparent bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
               {s}
-            </Badge>
+            </button>
           ))}
         </div>
       </div>
@@ -280,7 +382,7 @@ function MindMap({
               onClick={() => onActiveChange(i)}
               className={cn(
                 "absolute -translate-x-1/2 -translate-y-1/2 z-10 text-left transition-all",
-                "node-card px-4 py-3 w-[200px] hover:scale-[1.03]",
+                "node-card px-4 py-3 w-[200px] hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-offset-2",
                 isActive ? "ring-2 shadow-[var(--shadow-glow)]" : "opacity-90 hover:opacity-100",
               )}
               style={{
@@ -328,7 +430,15 @@ function MindMap({
   );
 }
 
-function SidePanel({ cluster, active }: { cluster?: Cluster; active: number }) {
+function SidePanel({
+  cluster,
+  active,
+  onActiveChange,
+}: {
+  cluster?: Cluster;
+  active: number;
+  onActiveChange: (i: number) => void;
+}) {
   const pillar = cluster?.pillars[active];
 
   return (
@@ -398,8 +508,9 @@ function SidePanel({ cluster, active }: { cluster?: Cluster; active: number }) {
             {cluster.pillars.map((p, i) => (
               <button
                 key={i}
-                onClick={() => {/* handled via parent? */}}
-                className="w-full text-left text-xs text-muted-foreground font-mono flex items-center gap-2"
+                type="button"
+                onClick={() => onActiveChange(i)}
+                className="w-full text-left text-xs text-muted-foreground font-mono flex items-center gap-2 hover:text-foreground transition-colors"
               >
                 <span
                   className="size-1.5 rounded-full"
