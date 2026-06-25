@@ -207,22 +207,12 @@ function Index() {
 
 function Header({
   mode,
-  topic,
-  setTopic,
-  onSubmit,
-  isPending,
-  showInput,
 }: {
   mode: Mode;
-  topic: string;
-  setTopic: (t: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  isPending: boolean;
-  showInput: boolean;
 }) {
   return (
     <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
-      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center gap-4 md:gap-6">
+      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 shrink-0">
           <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center">
             <Network className="size-5 text-primary-foreground" />
@@ -233,38 +223,10 @@ function Header({
           </div>
         </div>
 
-        {showInput && (
-          <form onSubmit={onSubmit} className="flex-1 flex gap-2 max-w-xl ml-auto">
-            <div className="relative flex-1">
-              <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary" />
-              <Input
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="Primary topic — e.g. Enterprise Cloud Security"
-                aria-label="Primary topic"
-                className="pl-10 h-10 bg-input border-border focus-visible:ring-primary"
-                disabled={isPending}
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={isPending || topic.trim().length < 2}
-              className="h-10 px-3 md:px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
-            >
-              {isPending ? (
-                <><Loader2 className="size-4 animate-spin" /> <span className="hidden md:inline">Mapping</span></>
-              ) : (
-                <><Sparkles className="size-4 md:mr-1" /> <span className="hidden md:inline">Map</span></>
-              )}
-            </Button>
-          </form>
-        )}
-        {!showInput && (
-          <div className="ml-auto hidden md:flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
-            <Target className="size-3.5 text-primary" />
-            {mode === "gap" ? "Intent Gap Analysis" : "Topic Map"}
-          </div>
-        )}
+        <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
+          <Target className="size-3.5 text-primary" />
+          {mode === "gap" ? "Intent Gap Analysis" : "Topic Map"}
+        </div>
       </div>
     </header>
   );
