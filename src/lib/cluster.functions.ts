@@ -5,18 +5,15 @@ import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const ClusterSchema = z.object({
   primaryTopic: z.string(),
-  pillars: z
-    .array(
-      z.object({
-        title: z.string(),
-        description: z.string(),
-        articles: z.array(z.string()).min(3).max(6),
-        keywords: z.array(z.string()).min(4).max(8),
-        internalLinks: z.array(z.string()).min(2).max(5),
-      }),
-    )
-    .min(4)
-    .max(5),
+  pillars: z.array(
+    z.object({
+      title: z.string(),
+      description: z.string(),
+      articles: z.array(z.string()),
+      keywords: z.array(z.string()),
+      internalLinks: z.array(z.string()),
+    }),
+  ),
 });
 
 export type Cluster = z.infer<typeof ClusterSchema>;
@@ -34,9 +31,10 @@ export const generateCluster = createServerFn({ method: "POST" })
     const { experimental_output } = await generateText({
       model: gateway("google/gemini-3-flash-preview"),
       experimental_output: Output.object({ schema: ClusterSchema }),
+      maxOutputTokens: 8192,
       system:
-        "You are an expert SEO content strategist. Given a primary topic, design a semantic content cluster: 4-5 secondary content pillars, each with concrete blog post titles, target keywords, and internal linking suggestions (titles that link to other pillars or articles in this cluster). Be specific, modern, and actionable.",
-      prompt: `Primary topic: "${data.topic}"\n\nReturn a content cluster following the schema. Article titles should be compelling and specific. Keywords should be realistic SEO terms. Internal links should reference other pillar topics or articles within this cluster.`,
+        "You are an expert SEO content strategist. Given a primary topic, design a semantic content cluster with exactly 4-5 secondary content pillars. Each pillar must include: a title, a 1-2 sentence description, 3-6 specific blog post titles (articles), 4-8 realistic SEO keywords, and 2-5 internal link suggestions referencing other pillars/articles in this cluster. Be specific, modern, and actionable.",
+      prompt: `Primary topic: "${data.topic}"\n\nReturn a content cluster following the schema exactly.`,
     });
 
     return experimental_output as Cluster;
