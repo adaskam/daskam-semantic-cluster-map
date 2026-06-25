@@ -655,6 +655,17 @@ function SidePanel({
   onActiveChange: (i: number) => void;
 }) {
   const pillar = cluster?.pillars[active];
+  const [exporting, setExporting] = useState(false);
+
+  const handlePdf = async () => {
+    if (!cluster) return;
+    setExporting(true);
+    try {
+      await exportPDF(cluster);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <>
@@ -670,18 +681,23 @@ function SidePanel({
             <DropdownMenuTrigger asChild>
               <Button
                 size="sm"
+                disabled={exporting}
                 className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
               >
-                <Download className="size-4 mr-1.5" />
-                Export
+                {exporting ? (
+                  <Loader2 className="size-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Download className="size-4 mr-1.5" />
+                )}
+                {exporting ? "Exporting" : "Export"}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => exportPDF(cluster)} className="cursor-pointer">
+              <DropdownMenuItem onClick={handlePdf} className="cursor-pointer">
                 <FileDown className="size-4 mr-2 text-primary" />
                 <div className="flex flex-col">
                   <span className="text-sm">Download PDF</span>
-                  <span className="text-[11px] text-muted-foreground">Print-ready report</span>
+                  <span className="text-[11px] text-muted-foreground">Editorial report</span>
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportMarkdown(cluster)} className="cursor-pointer">
@@ -695,6 +711,7 @@ function SidePanel({
           </DropdownMenu>
         </div>
       )}
+
 
       <div className="node-card p-5">
         <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
