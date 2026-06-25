@@ -810,10 +810,32 @@ function MindMap({
                 fill="none"
                 stroke={`url(#line-${i % PILLAR_COLORS.length})`}
                 strokeWidth={isActive ? 2.5 : 1.5}
-                opacity={isActive ? 1 : 0.55}
+                opacity={(isActive ? 1 : 0.55) * pillarAlpha}
+                style={{ transition: "opacity 200ms ease" }}
               />
             );
           })}
+
+          {/* Galaxy-view satellite dots: pillars collapsed into colored points */}
+          {galaxyAlpha > 0.01 &&
+            cluster.pillars.map((_, i) => {
+              const p = positions[i];
+              const color = PILLAR_COLORS[i % PILLAR_COLORS.length];
+              const t = galaxyAlpha;
+              const gx = STAGE.cx + (p.x - STAGE.cx) * (0.25 + 0.75 * (1 - t));
+              const gy = STAGE.cy + (p.y - STAGE.cy) * (0.25 + 0.75 * (1 - t));
+              return (
+                <circle
+                  key={`gx-${i}`}
+                  cx={gx}
+                  cy={gy}
+                  r={6 + 6 * t}
+                  fill={color}
+                  opacity={0.85 * t}
+                  style={{ transition: "opacity 200ms ease, r 200ms ease" }}
+                />
+              );
+            })}
 
           {cluster.pillars.map((pillar, i) => {
             if (i !== active) return null;
@@ -829,7 +851,8 @@ function MindMap({
                 stroke={PILLAR_COLORS[i % PILLAR_COLORS.length]}
                 strokeWidth={1.2}
                 strokeDasharray="4 4"
-                opacity={0.7}
+                opacity={0.7 * articleAlpha}
+                style={{ transition: "opacity 200ms ease" }}
               />
             ));
           })}
