@@ -1,29 +1,418 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { generateCluster, type Cluster } from "@/lib/cluster.functions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Sparkles, Link2, KeyRound, Network } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "Cluster Cartographer — Semantic Content Mind-Mapper" },
+      {
+        name: "description",
+        content:
+          "Generate an interactive mind-map of SEO content pillars, article ideas, keywords, and internal linking strategy from a single primary topic.",
+      },
+      { property: "og:title", content: "Cluster Cartographer" },
+      {
+        property: "og:description",
+        content: "AI-powered semantic content cluster mind-mapper for SEO strategists.",
+      },
     ],
   }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
+const PILLAR_COLORS = [
+  "var(--pillar-1)",
+  "var(--pillar-2)",
+  "var(--pillar-3)",
+  "var(--pillar-4)",
+  "var(--pillar-5)",
+];
+
+const STAGE = { w: 1100, h: 760, cx: 550, cy: 380 };
+
+function pillarPositions(n: number) {
+  const radius = 250;
+  return Array.from({ length: n }, (_, i) => {
+    const angle = (-Math.PI / 2) + (i * 2 * Math.PI) / n;
+    return {
+      x: STAGE.cx + radius * Math.cos(angle),
+      y: STAGE.cy + radius * Math.sin(angle),
+      angle,
+    };
+  });
+}
+
+function articlePositions(px: number, py: number, angle: number, count: number) {
+  const spread = Math.PI / 2.2;
+  const radius = 180;
+  return Array.from({ length: count }, (_, i) => {
+    const a = angle - spread / 2 + (spread * i) / Math.max(count - 1, 1);
+    return {
+      x: px + radius * Math.cos(a),
+      y: py + radius * Math.sin(a),
+    };
+  });
+}
+
 function Index() {
+  const [topic, setTopic] = useState("");
+  const [active, setActive] = useState(0);
+
+  const mutation = useMutation({
+    mutationFn: (t: string) => generateCluster({ data: { topic: t } }),
+    onSuccess: () => setActive(0),
+  });
+
+  const cluster: Cluster | undefined = mutation.data;
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (topic.trim().length < 2) return;
+    mutation.mutate(topic.trim());
+  };
+
+  const pillars = cluster?.pillars ?? [];
+  const positions = useMemo(() => pillarPositions(pillars.length || 4), [pillars.length]);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen flex flex-col">
+      <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
+        <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center">
+              <Network className="size-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-base font-semibold leading-none">Cluster Cartographer</h1>
+              <p className="text-xs text-muted-foreground mt-1">Semantic content mind-mapper</p>
+            </div>
+          </div>
+          <form onSubmit={onSubmit} className="flex-1 flex gap-2 max-w-2xl ml-auto">
+            <div className="relative flex-1">
+              <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary" />
+              <Input
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="Enter a primary topic — e.g. Enterprise Cloud Security"
+                className="pl-10 h-11 bg-input border-border focus-visible:ring-primary"
+                disabled={mutation.isPending}
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={mutation.isPending || topic.trim().length < 2}
+              className="h-11 px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+            >
+              {mutation.isPending ? (
+                <><Loader2 className="size-4 animate-spin" /> Mapping…</>
+              ) : (
+                "Map cluster"
+              )}
+            </Button>
+          </form>
+        </div>
+      </header>
+
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 p-6 max-w-[1600px] w-full mx-auto">
+        <section className="node-card relative overflow-hidden min-h-[760px]">
+          {!cluster && !mutation.isPending && <EmptyState />}
+          {mutation.isPending && <LoadingState topic={topic} />}
+          {mutation.isError && (
+            <div className="absolute inset-0 grid place-items-center p-8 text-center">
+              <div className="max-w-sm">
+                <p className="text-destructive font-medium mb-2">Couldn't generate cluster</p>
+                <p className="text-sm text-muted-foreground">
+                  {(mutation.error as Error)?.message || "Try again in a moment."}
+                </p>
+              </div>
+            </div>
+          )}
+          {cluster && (
+            <MindMap
+              cluster={cluster}
+              positions={positions}
+              active={active}
+              onActiveChange={setActive}
+            />
+          )}
+        </section>
+
+        <aside className="space-y-4">
+          <SidePanel cluster={cluster} active={active} />
+        </aside>
+      </main>
     </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="absolute inset-0 grid place-items-center p-8 text-center">
+      <div className="max-w-md">
+        <div className="size-16 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center mb-5 animate-pulse-ring">
+          <Network className="size-8 text-primary" />
+        </div>
+        <h2 className="text-2xl font-semibold text-glow">Map a content universe</h2>
+        <p className="text-sm text-muted-foreground mt-2">
+          Drop a primary topic above. We'll branch it into pillars, article ideas, keywords,
+          and an internal linking plan you can ship.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-2 justify-center">
+          {["Enterprise Cloud Security", "Sustainable Fashion", "AI for Healthcare"].map((s) => (
+            <Badge key={s} variant="secondary" className="bg-secondary/60 font-mono text-[11px]">
+              {s}
+            </Badge>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoadingState({ topic }: { topic: string }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center p-8 text-center">
+      <div>
+        <div className="size-20 mx-auto rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <p className="mt-5 font-medium">Charting cluster for <span className="text-primary">{topic}</span></p>
+        <p className="text-sm text-muted-foreground mt-1">Identifying pillars, articles, and link paths…</p>
+      </div>
+    </div>
+  );
+}
+
+function MindMap({
+  cluster,
+  positions,
+  active,
+  onActiveChange,
+}: {
+  cluster: Cluster;
+  positions: { x: number; y: number; angle: number }[];
+  active: number;
+  onActiveChange: (i: number) => void;
+}) {
+  return (
+    <div className="relative w-full h-full overflow-auto">
+      <div
+        className="relative mx-auto"
+        style={{ width: STAGE.w, height: STAGE.h }}
+      >
+        <svg
+          width={STAGE.w}
+          height={STAGE.h}
+          className="absolute inset-0 pointer-events-none"
+        >
+          <defs>
+            {PILLAR_COLORS.map((c, i) => (
+              <linearGradient key={i} id={`line-${i}`} x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.9" />
+                <stop offset="100%" stopColor={c} stopOpacity="0.6" />
+              </linearGradient>
+            ))}
+          </defs>
+
+          {cluster.pillars.map((_, i) => {
+            const p = positions[i];
+            const isActive = i === active;
+            const d = `M ${STAGE.cx} ${STAGE.cy} C ${STAGE.cx} ${(STAGE.cy + p.y) / 2}, ${p.x} ${(STAGE.cy + p.y) / 2}, ${p.x} ${p.y}`;
+            return (
+              <path
+                key={i}
+                d={d}
+                fill="none"
+                stroke={`url(#line-${i % PILLAR_COLORS.length})`}
+                strokeWidth={isActive ? 2.5 : 1.5}
+                opacity={isActive ? 1 : 0.55}
+              />
+            );
+          })}
+
+          {cluster.pillars.map((pillar, i) => {
+            if (i !== active) return null;
+            const p = positions[i];
+            const arts = articlePositions(p.x, p.y, p.angle, pillar.articles.length);
+            return arts.map((a, j) => (
+              <line
+                key={`${i}-${j}`}
+                x1={p.x}
+                y1={p.y}
+                x2={a.x}
+                y2={a.y}
+                stroke={PILLAR_COLORS[i % PILLAR_COLORS.length]}
+                strokeWidth={1.2}
+                strokeDasharray="4 4"
+                opacity={0.7}
+              />
+            ));
+          })}
+        </svg>
+
+        {/* Center node */}
+        <div
+          className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
+          style={{ left: STAGE.cx, top: STAGE.cy }}
+        >
+          <div className="relative">
+            <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-2xl animate-pulse-ring" />
+            <div className="relative node-card px-6 py-4 max-w-[260px] text-center border-primary/50 shadow-[var(--shadow-glow)]">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-primary font-mono">Primary Topic</p>
+              <p className="text-lg font-semibold mt-1 leading-tight">{cluster.primaryTopic}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Pillar nodes */}
+        {cluster.pillars.map((pillar, i) => {
+          const p = positions[i];
+          const isActive = i === active;
+          const color = PILLAR_COLORS[i % PILLAR_COLORS.length];
+          return (
+            <button
+              key={i}
+              onClick={() => onActiveChange(i)}
+              className={cn(
+                "absolute -translate-x-1/2 -translate-y-1/2 z-10 text-left transition-all",
+                "node-card px-4 py-3 w-[200px] hover:scale-[1.03]",
+                isActive ? "ring-2 shadow-[var(--shadow-glow)]" : "opacity-90 hover:opacity-100",
+              )}
+              style={{
+                left: p.x,
+                top: p.y,
+                borderColor: isActive ? color : undefined,
+                ...(isActive ? { ["--tw-ring-color" as never]: color } : {}),
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="size-2 rounded-full"
+                  style={{ background: color, boxShadow: `0 0 12px ${color}` }}
+                />
+                <span className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
+                  Pillar {i + 1}
+                </span>
+              </div>
+              <p className="text-sm font-semibold mt-1 leading-snug">{pillar.title}</p>
+            </button>
+          );
+        })}
+
+        {/* Article nodes for active pillar */}
+        {cluster.pillars[active] &&
+          articlePositions(
+            positions[active].x,
+            positions[active].y,
+            positions[active].angle,
+            cluster.pillars[active].articles.length,
+          ).map((a, j) => {
+            const color = PILLAR_COLORS[active % PILLAR_COLORS.length];
+            return (
+              <div
+                key={j}
+                className="absolute -translate-x-1/2 -translate-y-1/2 z-10 node-card px-3 py-2 w-[180px] animate-in fade-in slide-in-from-center"
+                style={{ left: a.x, top: a.y, borderColor: `color-mix(in oklab, ${color} 40%, transparent)` }}
+              >
+                <p className="text-xs leading-snug">{cluster.pillars[active].articles[j]}</p>
+              </div>
+            );
+          })}
+      </div>
+    </div>
+  );
+}
+
+function SidePanel({ cluster, active }: { cluster?: Cluster; active: number }) {
+  const pillar = cluster?.pillars[active];
+
+  return (
+    <>
+      <div className="node-card p-5">
+        <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
+          Active cluster
+        </p>
+        {pillar ? (
+          <>
+            <h3 className="text-xl font-semibold mt-1 leading-tight">{pillar.title}</h3>
+            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+              {pillar.description}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground mt-2">
+            Generate a cluster to see strategy details here.
+          </p>
+        )}
+      </div>
+
+      <div className="node-card p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <KeyRound className="size-4 text-primary" />
+          <h4 className="text-sm font-semibold uppercase tracking-wider">Recommended keywords</h4>
+        </div>
+        {pillar ? (
+          <div className="flex flex-wrap gap-2">
+            {pillar.keywords.map((k) => (
+              <span
+                key={k}
+                className="px-2.5 py-1 rounded-md bg-secondary/60 border border-border/60 text-xs font-mono text-foreground/90"
+              >
+                {k}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">No keywords yet.</p>
+        )}
+      </div>
+
+      <div className="node-card p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Link2 className="size-4 text-accent" />
+          <h4 className="text-sm font-semibold uppercase tracking-wider">Internal linking strategy</h4>
+        </div>
+        {pillar ? (
+          <ul className="space-y-2.5">
+            {pillar.internalLinks.map((l, i) => (
+              <li key={i} className="flex gap-3 text-sm">
+                <span className="text-accent font-mono text-xs mt-0.5">→</span>
+                <span className="leading-snug text-foreground/90">{l}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-muted-foreground">No linking plan yet.</p>
+        )}
+      </div>
+
+      {cluster && (
+        <div className="node-card p-5">
+          <h4 className="text-sm font-semibold uppercase tracking-wider mb-3">All pillars</h4>
+          <div className="space-y-1.5">
+            {cluster.pillars.map((p, i) => (
+              <button
+                key={i}
+                onClick={() => {/* handled via parent? */}}
+                className="w-full text-left text-xs text-muted-foreground font-mono flex items-center gap-2"
+              >
+                <span
+                  className="size-1.5 rounded-full"
+                  style={{ background: PILLAR_COLORS[i % PILLAR_COLORS.length] }}
+                />
+                <span className={cn(i === active && "text-foreground font-medium")}>
+                  {String(i + 1).padStart(2, "0")} · {p.title}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
