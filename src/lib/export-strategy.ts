@@ -11,7 +11,8 @@ const MARGIN_MM = 14;
 const CONTENT_W_MM = A4_W_MM - MARGIN_MM * 2;
 const CONTENT_H_MM = A4_H_MM - MARGIN_MM * 2;
 const GAP_MM = 4;
-const PAPER = "#faf8f3";
+const PAPER = "#f1ede3";
+const PAPER_RGB: [number, number, number] = [241, 237, 227];
 
 function slug(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "cluster";
@@ -84,7 +85,10 @@ function probe(dataUrl: string) {
   });
 }
 
-async function renderOffscreen(cluster: Cluster): Promise<{ node: HTMLElement; cleanup: () => void }> {
+async function renderOffscreen(
+  cluster: Cluster,
+  logoDataUrl?: string | null,
+): Promise<{ node: HTMLElement; cleanup: () => void }> {
   const host = document.createElement("div");
   host.style.position = "fixed";
   host.style.left = "-10000px";
@@ -95,7 +99,7 @@ async function renderOffscreen(cluster: Cluster): Promise<{ node: HTMLElement; c
   document.body.appendChild(host);
 
   const root = createRoot(host);
-  root.render(createElement(ClusterReport, { cluster }));
+  root.render(createElement(ClusterReport, { cluster, logoDataUrl }));
 
   // Wait for fonts + a paint
   if (document.fonts && document.fonts.ready) {
@@ -113,8 +117,8 @@ async function renderOffscreen(cluster: Cluster): Promise<{ node: HTMLElement; c
   };
 }
 
-export async function exportPDF(cluster: Cluster) {
-  const { node, cleanup } = await renderOffscreen(cluster);
+export async function exportPDF(cluster: Cluster, logoDataUrl?: string | null) {
+  const { node, cleanup } = await renderOffscreen(cluster, logoDataUrl);
 
   try {
     const sections = Array.from(node.querySelectorAll<HTMLElement>("[data-pdf-section]"));
@@ -152,7 +156,7 @@ export async function exportPDF(cluster: Cluster) {
       while (drawn < heightMm) {
         const slice = Math.min(CONTENT_H_MM, heightMm - drawn);
         pdf.addImage(dataUrl, "JPEG", MARGIN_MM, MARGIN_MM - drawn, widthMm, heightMm);
-        pdf.setFillColor(250, 248, 243);
+        pdf.setFillColor(PAPER_RGB[0], PAPER_RGB[1], PAPER_RGB[2]);
         pdf.rect(0, 0, A4_W_MM, MARGIN_MM, "F");
         pdf.rect(0, MARGIN_MM + slice, A4_W_MM, A4_H_MM, "F");
         drawn += slice;
@@ -171,9 +175,9 @@ export async function exportPDF(cluster: Cluster) {
       pdf.setPage(i);
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(8);
-      pdf.setTextColor(138, 127, 114);
+      pdf.setTextColor(126, 131, 120);
       pdf.text(
-        `${cluster.primaryTopic}  ·  ${String(i).padStart(2, "0")} / ${String(total).padStart(2, "0")}`,
+        `${cluster.primaryTopic.toUpperCase()}  ·  ATLAS  ·  ${String(i).padStart(2, "0")} / ${String(total).padStart(2, "0")}`,
         MARGIN_MM,
         A4_H_MM - 6,
       );

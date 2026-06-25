@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { generateCluster, type Cluster } from "@/lib/cluster.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Download, FileText, FileDown } from "lucide-react";
+import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Download, FileText, FileDown, ImagePlus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportMarkdown, exportPDF } from "@/lib/export-strategy";
 import {
@@ -656,12 +656,22 @@ function SidePanel({
 }) {
   const pillar = cluster?.pillars[active];
   const [exporting, setExporting] = useState(false);
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setLogoDataUrl(typeof reader.result === "string" ? reader.result : null);
+    reader.readAsDataURL(file);
+  };
 
   const handlePdf = async () => {
     if (!cluster) return;
     setExporting(true);
     try {
-      await exportPDF(cluster);
+      await exportPDF(cluster, logoDataUrl);
     } finally {
       setExporting(false);
     }
@@ -670,45 +680,85 @@ function SidePanel({
   return (
     <>
       {cluster && (
-        <div className="node-card p-4 flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
-              Hand-off
-            </p>
-            <p className="text-sm font-medium mt-0.5 truncate">Export Strategy</p>
+        <div className="node-card p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
+                Hand-off
+              </p>
+              <p className="text-sm font-medium mt-0.5 truncate">Export Strategy</p>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  disabled={exporting}
+                  className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
+                >
+                  {exporting ? (
+                    <Loader2 className="size-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Download className="size-4 mr-1.5" />
+                  )}
+                  {exporting ? "Exporting" : "Export"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={handlePdf} className="cursor-pointer">
+                  <FileDown className="size-4 mr-2 text-primary" />
+                  <div className="flex flex-col">
+                    <span className="text-sm">Download PDF</span>
+                    <span className="text-[11px] text-muted-foreground">Atlas report</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportMarkdown(cluster)} className="cursor-pointer">
+                  <FileText className="size-4 mr-2 text-accent" />
+                  <div className="flex flex-col">
+                    <span className="text-sm">Download Markdown</span>
+                    <span className="text-[11px] text-muted-foreground">Writer-ready brief</span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                disabled={exporting}
-                className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
+
+          <div className="flex items-center gap-2 pt-3 border-t border-border/60">
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              className="hidden"
+              onChange={handleLogoChange}
+            />
+            {logoDataUrl ? (
+              <>
+                <div className="size-10 rounded-md bg-secondary/60 border border-border/60 grid place-items-center overflow-hidden shrink-0">
+                  <img src={logoDataUrl} alt="Brand logo" className="max-h-8 max-w-9 object-contain" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">PDF cover</p>
+                  <p className="text-xs text-foreground/80 truncate">Logo attached</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLogoDataUrl(null)}
+                  className="size-7 grid place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  aria-label="Remove logo"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+                className="w-full inline-flex items-center justify-center gap-2 h-9 px-3 rounded-md border border-dashed border-border/80 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-secondary/40 transition-colors"
               >
-                {exporting ? (
-                  <Loader2 className="size-4 mr-1.5 animate-spin" />
-                ) : (
-                  <Download className="size-4 mr-1.5" />
-                )}
-                {exporting ? "Exporting" : "Export"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={handlePdf} className="cursor-pointer">
-                <FileDown className="size-4 mr-2 text-primary" />
-                <div className="flex flex-col">
-                  <span className="text-sm">Download PDF</span>
-                  <span className="text-[11px] text-muted-foreground">Editorial report</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportMarkdown(cluster)} className="cursor-pointer">
-                <FileText className="size-4 mr-2 text-accent" />
-                <div className="flex flex-col">
-                  <span className="text-sm">Download Markdown</span>
-                  <span className="text-[11px] text-muted-foreground">Writer-ready brief</span>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <ImagePlus className="size-3.5" />
+                Add your logo to PDF
+              </button>
+            )}
+          </div>
         </div>
       )}
 
