@@ -5,7 +5,7 @@ import { generateCluster, generateGapCluster, type Cluster } from "@/lib/cluster
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Pencil, Target, Compass } from "lucide-react";
+import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Pencil, Target, Compass, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EditExportDialog } from "@/components/EditExportDialog";
 
@@ -489,6 +489,50 @@ function MindMap({
 
   const finalScale = fitScale * zoom;
 
+  // Dynamic search across pillar content -> heat scores per pillar
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const pillarScores = useMemo(() => {
+    return cluster.pillars.map((p) => {
+      if (!q) return 0;
+      const haystacks: string[] = [
+        p.title,
+        p.description,
+        p.intent ?? "",
+        p.opportunity ?? "",
+        ...p.articles,
+        ...p.keywords,
+        ...p.internalLinks,
+      ];
+      let score = 0;
+      for (const h of haystacks) {
+        const s = h.toLowerCase();
+        let idx = 0;
+        while ((idx = s.indexOf(q, idx)) !== -1) {
+          score += 1;
+          idx += q.length;
+        }
+      }
+      // weight title matches heavier
+      if (p.title.toLowerCase().includes(q)) score += 3;
+      return score;
+    });
+  }, [cluster, q]);
+  const maxScore = Math.max(1, ...pillarScores);
+  const articleMatches = useMemo(() => {
+    const ap = cluster.pillars[active];
+    if (!ap || !q) return new Set<number>();
+    const hits = new Set<number>();
+    ap.articles.forEach((a, i) => {
+      if (a.toLowerCase().includes(q)) hits.add(i);
+    });
+    return hits;
+  }, [cluster, active, q]);
+  const hasQuery = q.length > 0;
+  const totalMatches = pillarScores.reduce((a, b) => a + b, 0);
+
+
+
   // Zoom centered on a client point (Figma-style cursor-anchored zoom)
   const zoomAt = (nextZoom: number, clientX?: number, clientY?: number) => {
     const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
@@ -632,9 +676,38 @@ function MindMap({
         </button>
       </div>
 
+      {/* Dynamic search bar */}
+      <div className="absolute top-3 left-3 z-30 flex items-center gap-1 rounded-lg border border-border/60 bg-background/85 px-2 py-1 backdrop-blur-sm shadow-sm">
+        <Search className="size-4 text-muted-foreground" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search clusters…"
+          aria-label="Search the cluster map"
+          className="h-7 w-44 sm:w-56 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+        />
+        {hasQuery && (
+          <>
+            <span className="text-[10px] font-mono tabular-nums text-muted-foreground px-1">
+              {totalMatches}
+            </span>
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="size-3.5" />
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="pointer-events-none absolute bottom-3 left-3 z-30 rounded-md border border-border/50 bg-background/70 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
         Scroll to pan · ⌘/Ctrl + scroll to zoom · Space + drag
       </div>
+
 
       <div
         className="absolute top-0 left-0 origin-top-left select-none"
@@ -646,6 +719,11 @@ function MindMap({
           className="absolute inset-0 pointer-events-none"
         >
         <defs>
+          <radialGradient id="heat-glow">
+            <stop offset="0%" stopColor="white" stopOpacity="0.95" />
+            <stop offset="40%" stopColor="white" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </radialGradient>
           {cluster.pillars.map((_, i) => {
             const p = positions[i];
             return (
@@ -664,6 +742,44 @@ function MindMap({
             );
           })}
         </defs>
+
+        {/* Heat map glow over matching clusters */}
+        {hasQuery &&
+          cluster.pillars.map((_, i) => {
+            const score = pillarScores[i];
+            if (score <= 0) return null;
+            const p = positions[i];
+            const color = PILLAR_COLORS[i % PILLAR_COLORS.length];
+            const intensity = 0.35 + 0.55 * (score / maxScore);
+            const radius = 130 + 60 * (score / maxScore);
+            return (
+              <g key={`heat-${i}`} style={{ color }}>
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={radius}
+                  fill="url(#heat-glow)"
+                  className="animate-heat-pulse"
+                  style={{
+                    color,
+                    mixBlendMode: "screen",
+                    ["--heat-min" as never]: String(intensity * 0.5),
+                    ["--heat-max" as never]: String(intensity),
+                  }}
+                />
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={radius * 0.55}
+                  fill={color}
+                  opacity={intensity * 0.25}
+                  className="animate-heat-pulse"
+                  style={{ mixBlendMode: "screen" }}
+                />
+              </g>
+            );
+          })}
+
 
           {cluster.pillars.map((_, i) => {
             const p = positions[i];
@@ -720,6 +836,9 @@ function MindMap({
           const p = positions[i];
           const isActive = i === active;
           const color = PILLAR_COLORS[i % PILLAR_COLORS.length];
+          const score = pillarScores[i];
+          const isMatch = hasQuery && score > 0;
+          const isDimmed = hasQuery && score === 0;
           return (
             <button
               key={i}
@@ -728,12 +847,17 @@ function MindMap({
                 "absolute -translate-x-1/2 -translate-y-1/2 z-10 text-left transition-all",
                 "node-card px-4 py-3 w-[200px] hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-offset-2",
                 isActive ? "ring-2 shadow-[var(--shadow-glow)]" : "opacity-90 hover:opacity-100",
+                isMatch && "animate-node-pulse",
+                isDimmed && "opacity-30 grayscale",
               )}
               style={{
                 left: p.x,
                 top: p.y,
-                borderColor: isActive ? color : undefined,
+                borderColor: isMatch ? color : isActive ? color : undefined,
                 ...(isActive ? { ["--tw-ring-color" as never]: color } : {}),
+                ...(isMatch
+                  ? { ["--heat-color" as never]: `color-mix(in oklab, ${color} 70%, transparent)` }
+                  : {}),
               }}
             >
               <div className="flex items-center gap-2">
@@ -744,6 +868,11 @@ function MindMap({
                 <span className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
                   Pillar {i + 1}
                 </span>
+                {isMatch && (
+                  <span className="ml-auto text-[10px] font-mono tabular-nums text-foreground/80">
+                    {score}
+                  </span>
+                )}
               </div>
               <p className="text-sm font-semibold mt-1 leading-snug">{pillar.title}</p>
             </button>
@@ -759,16 +888,33 @@ function MindMap({
             cluster.pillars[active].articles.length,
           ).map((a, j) => {
             const color = PILLAR_COLORS[active % PILLAR_COLORS.length];
+            const isMatch = articleMatches.has(j);
+            const isDimmed = hasQuery && !isMatch;
             return (
               <div
                 key={j}
-                className="absolute -translate-x-1/2 -translate-y-1/2 z-10 node-card px-3 py-2 w-[180px] animate-in fade-in slide-in-from-center"
-                style={{ left: a.x, top: a.y, borderColor: `color-mix(in oklab, ${color} 40%, transparent)` }}
+                className={cn(
+                  "absolute -translate-x-1/2 -translate-y-1/2 z-10 node-card px-3 py-2 w-[180px] animate-in fade-in slide-in-from-center transition-all",
+                  isMatch && "animate-node-pulse ring-1",
+                  isDimmed && "opacity-30 grayscale",
+                )}
+                style={{
+                  left: a.x,
+                  top: a.y,
+                  borderColor: isMatch ? color : `color-mix(in oklab, ${color} 40%, transparent)`,
+                  ...(isMatch
+                    ? {
+                        ["--heat-color" as never]: `color-mix(in oklab, ${color} 70%, transparent)`,
+                        ["--tw-ring-color" as never]: color,
+                      }
+                    : {}),
+                }}
               >
                 <p className="text-xs leading-snug">{cluster.pillars[active].articles[j]}</p>
               </div>
             );
           })}
+
       </div>
     </div>
   );
