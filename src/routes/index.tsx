@@ -219,7 +219,7 @@ function Header() {
 function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
   const tabs: { id: Mode; label: string; icon: typeof Sparkles; sub: string }[] = [
     { id: "topic", label: "Topic Map", icon: Sparkles, sub: "From seed keywords" },
-    { id: "gap", label: "Intent Gap Analysis", icon: Target, sub: "From a URL + seed keyword(s)" },
+    { id: "gap", label: "Intent Gap Analysis", icon: Target, sub: "From a URL + seed keywords" },
   ];
   return (
     <div className="grid grid-cols-2 gap-2 p-1 rounded-xl border border-border/60 bg-secondary/30">
