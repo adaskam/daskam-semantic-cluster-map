@@ -489,6 +489,50 @@ function MindMap({
 
   const finalScale = fitScale * zoom;
 
+  // Dynamic search across pillar content -> heat scores per pillar
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const pillarScores = useMemo(() => {
+    return cluster.pillars.map((p) => {
+      if (!q) return 0;
+      const haystacks: string[] = [
+        p.title,
+        p.description,
+        p.intent ?? "",
+        p.opportunity ?? "",
+        ...p.articles,
+        ...p.keywords,
+        ...p.internalLinks,
+      ];
+      let score = 0;
+      for (const h of haystacks) {
+        const s = h.toLowerCase();
+        let idx = 0;
+        while ((idx = s.indexOf(q, idx)) !== -1) {
+          score += 1;
+          idx += q.length;
+        }
+      }
+      // weight title matches heavier
+      if (p.title.toLowerCase().includes(q)) score += 3;
+      return score;
+    });
+  }, [cluster, q]);
+  const maxScore = Math.max(1, ...pillarScores);
+  const articleMatches = useMemo(() => {
+    const ap = cluster.pillars[active];
+    if (!ap || !q) return new Set<number>();
+    const hits = new Set<number>();
+    ap.articles.forEach((a, i) => {
+      if (a.toLowerCase().includes(q)) hits.add(i);
+    });
+    return hits;
+  }, [cluster, active, q]);
+  const hasQuery = q.length > 0;
+  const totalMatches = pillarScores.reduce((a, b) => a + b, 0);
+
+
+
   // Zoom centered on a client point (Figma-style cursor-anchored zoom)
   const zoomAt = (nextZoom: number, clientX?: number, clientY?: number) => {
     const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
