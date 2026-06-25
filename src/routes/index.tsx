@@ -132,12 +132,14 @@ function Index() {
 
         {cluster && (
           <>
-            <section className="node-card relative overflow-hidden">
+            <section className={cn("node-card relative", zoom > 1 ? "overflow-auto" : "overflow-hidden")}>
               <MindMap
                 cluster={cluster}
                 positions={positions}
                 active={active}
                 onActiveChange={setActive}
+                zoom={zoom}
+                onZoomChange={setZoom}
               />
             </section>
 
