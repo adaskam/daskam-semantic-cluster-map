@@ -878,8 +878,45 @@ function MindMap({
           const isActive = i === active;
           const color = PILLAR_COLORS[i % PILLAR_COLORS.length];
           const score = pillarScores[i];
+        {/* Center node */}
+        <div
+          className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
+          style={{ left: STAGE.cx, top: STAGE.cy }}
+        >
+          <div
+            className="relative"
+            style={{
+              transform: `scale(${1 + 0.35 * galaxyAlpha})`,
+              transition: "transform 220ms ease",
+            }}
+          >
+            <div
+              className="absolute inset-0 rounded-2xl bg-primary/30 blur-2xl animate-pulse-ring"
+              style={{ opacity: 0.6 + 0.4 * galaxyAlpha }}
+            />
+            <div className="relative node-card px-6 py-4 max-w-[260px] text-center border-primary/50 shadow-[var(--shadow-glow)]">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-primary font-mono">Primary Topic</p>
+              <p className="text-lg font-semibold mt-1 leading-tight">{cluster.primaryTopic}</p>
+              <p
+                className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mt-2"
+                style={{ opacity: galaxyAlpha, transition: "opacity 200ms ease" }}
+              >
+                {cluster.pillars.length} pillars · {totalArticles} articles
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Pillar nodes */}
+        {cluster.pillars.map((pillar, i) => {
+          const p = positions[i];
+          const isActive = i === active;
+          const color = PILLAR_COLORS[i % PILLAR_COLORS.length];
+          const score = pillarScores[i];
           const isMatch = hasQuery && score > 0;
           const isDimmed = hasQuery && score === 0;
+          const baseOpacity = isActive ? 1 : 0.9;
+          const opacity = pillarAlpha * (isDimmed ? 0.3 : baseOpacity);
           return (
             <button
               key={i}
