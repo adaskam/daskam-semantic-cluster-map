@@ -911,6 +911,10 @@ function MindMap({
               style={{
                 left: p.x,
                 top: p.y,
+                opacity,
+                pointerEvents: pillarAlpha < 0.2 ? "none" : "auto",
+                transform: `translate(-50%, -50%) scale(${0.7 + 0.3 * pillarAlpha})`,
+                transition: "opacity 200ms ease, transform 200ms ease",
                 borderColor: isMatch ? color : isActive ? color : undefined,
                 ...(isActive ? { ["--tw-ring-color" as never]: color } : {}),
                 ...(isMatch
