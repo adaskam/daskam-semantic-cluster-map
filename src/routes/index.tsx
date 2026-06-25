@@ -40,7 +40,7 @@ const EXAMPLE_TOPICS = [
   "AI for Healthcare",
 ];
 
-const STAGE = { w: 1100, h: 760, cx: 550, cy: 380 };
+const STAGE = { w: 1240, h: 940, cx: 620, cy: 470 };
 
 function pillarPositions(n: number) {
   const radius = 250;
