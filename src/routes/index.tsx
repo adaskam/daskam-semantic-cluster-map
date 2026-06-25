@@ -292,8 +292,13 @@ function HeroSection({
   setGoals,
   competitors,
   setCompetitors,
+  textLabel,
+  setTextLabel,
+  textBlobs,
+  setTextBlobs,
   onTopicSubmit,
   onGapSubmit,
+  onTextSubmit,
   isPending,
 }: {
   mode: Mode;
@@ -308,32 +313,51 @@ function HeroSection({
   setGoals: (v: string) => void;
   competitors: string;
   setCompetitors: (v: string) => void;
+  textLabel: string;
+  setTextLabel: (v: string) => void;
+  textBlobs: string;
+  setTextBlobs: (v: string) => void;
   onTopicSubmit: (e: React.FormEvent) => void;
   onGapSubmit: (e: React.FormEvent) => void;
+  onTextSubmit: (e: React.FormEvent) => void;
   isPending: boolean;
 }) {
+  const blobCount = textBlobs
+    .split(/\n\s*\n+|\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean).length;
+
   return (
     <div className="w-full max-w-2xl mx-auto text-center">
       <div className="size-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center mb-6 animate-pulse-ring">
         {mode === "topic" ? (
           <Network className="size-10 text-primary" />
-        ) : (
+        ) : mode === "gap" ? (
           <Compass className="size-10 text-primary" />
+        ) : (
+          <FileText className="size-10 text-primary" />
         )}
       </div>
 
       <h2 className="text-3xl md:text-4xl font-semibold text-glow">
-        {mode === "topic" ? "Map a content universe" : "Find your intent gaps"}
+        {mode === "topic"
+          ? "Map a content universe"
+          : mode === "gap"
+            ? "Find your intent gaps"
+            : "Cluster your own text"}
       </h2>
       <p className="text-base text-muted-foreground mt-3 max-w-md mx-auto">
         {mode === "topic"
           ? "Enter a primary topic and we'll generate a complete semantic content cluster: pillars, article ideas, keywords, and internal linking strategy."
-          : "Add your site, seed keywords, goals, and competitors. We'll map content opportunities based on search intent gaps."}
+          : mode === "gap"
+            ? "Add your site, seed keywords, goals, and competitors. We'll map content opportunities based on search intent gaps."
+            : "Paste paragraphs, tweets, reviews, or any text blobs (one per line or separated by blank lines). We'll group them by semantic similarity and place them on the map."}
       </p>
 
       <div className="mt-6 text-left">
         <ModeTabs mode={mode} setMode={setMode} />
       </div>
+
 
       {mode === "topic" ? (
         <form onSubmit={onTopicSubmit} className="mt-6 flex flex-col gap-3">
