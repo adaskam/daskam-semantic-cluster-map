@@ -123,14 +123,7 @@ function Index() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header
-        mode={mode}
-        topic={topic}
-        setTopic={setTopic}
-        onSubmit={onTopicSubmit}
-        isPending={activeMutation.isPending}
-        showInput={mode === "topic"}
-      />
+      <Header mode={mode} />
 
       <main
         className={cn(
