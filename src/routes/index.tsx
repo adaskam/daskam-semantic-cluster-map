@@ -509,14 +509,25 @@ function MindMap({
           height={STAGE.h}
           className="absolute inset-0 pointer-events-none"
         >
-          <defs>
-            {PILLAR_COLORS.map((c, i) => (
-              <linearGradient key={i} id={`line-${i}`} x1="0" y1="0" x2="1" y2="0">
+        <defs>
+          {cluster.pillars.map((_, i) => {
+            const p = positions[i];
+            return (
+              <linearGradient
+                key={i}
+                id={`line-${i}`}
+                gradientUnits="userSpaceOnUse"
+                x1={STAGE.cx}
+                y1={STAGE.cy}
+                x2={p.x}
+                y2={p.y}
+              >
                 <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.9" />
-                <stop offset="100%" stopColor={c} stopOpacity="0.6" />
+                <stop offset="100%" stopColor={PILLAR_COLORS[i % PILLAR_COLORS.length]} stopOpacity="0.6" />
               </linearGradient>
-            ))}
-          </defs>
+            );
+          })}
+        </defs>
 
           {cluster.pillars.map((_, i) => {
             const p = positions[i];
