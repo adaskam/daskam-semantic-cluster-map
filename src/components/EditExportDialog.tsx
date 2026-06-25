@@ -348,6 +348,72 @@ export function EditExportDialog({ open, onOpenChange, cluster }: Props) {
   );
 }
 
+const REPORT_WIDTH = 794;
+
+function PreviewPane({
+  cluster,
+  logoDataUrl,
+  logoPlacement,
+  logoSize,
+}: {
+  cluster: Cluster;
+  logoDataUrl: string | null;
+  logoPlacement: LogoPlacement;
+  logoSize: LogoSize;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.5);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth - 32; // padding
+      setScale(Math.min(1, Math.max(0.25, w / REPORT_WIDTH)));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div className="hidden md:flex flex-col bg-[#e7e1d2]/40 border-l border-border/60 min-h-0">
+      <div className="px-4 py-2.5 border-b border-border/60 flex items-center justify-between shrink-0 bg-background/60">
+        <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
+          Live PDF preview
+        </p>
+        <p className="text-[10px] font-mono text-muted-foreground">{Math.round(scale * 100)}%</p>
+      </div>
+      <div ref={containerRef} className="flex-1 min-h-0 overflow-auto p-4">
+        <div
+          style={{
+            width: REPORT_WIDTH * scale,
+            margin: "0 auto",
+          }}
+        >
+          <div
+            style={{
+              width: REPORT_WIDTH,
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+            }}
+          >
+            <ClusterReport
+              cluster={cluster}
+              logoDataUrl={logoDataUrl}
+              logoPlacement={logoPlacement}
+              logoSize={logoSize}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function Label({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <label className={cn("text-[11px] uppercase tracking-[0.18em] font-mono text-muted-foreground", className)}>
