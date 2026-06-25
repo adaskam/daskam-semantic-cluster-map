@@ -69,7 +69,7 @@ function articlePositions(px: number, py: number, angle: number, count: number) 
   });
 }
 
-type Mode = "topic" | "gap";
+type Mode = "topic" | "gap" | "text";
 
 function Index() {
   const [mode, setMode] = useState<Mode>("topic");
@@ -78,6 +78,8 @@ function Index() {
   const [seedKeywords, setSeedKeywords] = useState("");
   const [goals, setGoals] = useState("");
   const [competitors, setCompetitors] = useState("");
+  const [textLabel, setTextLabel] = useState("");
+  const [textBlobs, setTextBlobs] = useState("");
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(1);
 
@@ -92,9 +94,18 @@ function Index() {
     onSuccess: () => setActive(0),
   });
 
-  const activeMutation = mode === "topic" ? topicMutation : gapMutation;
-  const cluster: Cluster | undefined = (topicMutation.data ?? gapMutation.data) as Cluster | undefined;
-  const lastData = mode === "topic" ? topicMutation.data : gapMutation.data;
+  const textMutation = useMutation({
+    mutationFn: (vars: { label: string; texts: string }) =>
+      generateTextCluster({ data: vars }),
+    onSuccess: () => setActive(0),
+  });
+
+  const activeMutation =
+    mode === "topic" ? topicMutation : mode === "gap" ? gapMutation : textMutation;
+  const cluster: Cluster | undefined =
+    (topicMutation.data ?? gapMutation.data ?? textMutation.data) as Cluster | undefined;
+  const lastData =
+    mode === "topic" ? topicMutation.data : mode === "gap" ? gapMutation.data : textMutation.data;
 
   const onTopicSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,6 +123,13 @@ function Index() {
       competitors: competitors.trim(),
     });
   };
+
+  const onTextSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (textBlobs.trim().length < 10) return;
+    textMutation.mutate({ label: textLabel.trim(), texts: textBlobs.trim() });
+  };
+
 
   const pillars = cluster?.pillars ?? [];
   const positions = useMemo(() => pillarPositions(pillars.length || 4), [pillars.length]);
