@@ -5,7 +5,7 @@ import { generateCluster, generateGapCluster, type Cluster } from "@/lib/cluster
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Pencil, Target, Compass } from "lucide-react";
+import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Pencil, Target, Compass, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EditExportDialog } from "@/components/EditExportDialog";
 
