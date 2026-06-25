@@ -863,26 +863,6 @@ function MindMap({
           className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
           style={{ left: STAGE.cx, top: STAGE.cy }}
         >
-          <div className="relative">
-            <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-2xl animate-pulse-ring" />
-            <div className="relative node-card px-6 py-4 max-w-[260px] text-center border-primary/50 shadow-[var(--shadow-glow)]">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-primary font-mono">Primary Topic</p>
-              <p className="text-lg font-semibold mt-1 leading-tight">{cluster.primaryTopic}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Pillar nodes */}
-        {cluster.pillars.map((pillar, i) => {
-          const p = positions[i];
-          const isActive = i === active;
-          const color = PILLAR_COLORS[i % PILLAR_COLORS.length];
-          const score = pillarScores[i];
-        {/* Center node */}
-        <div
-          className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
-          style={{ left: STAGE.cx, top: STAGE.cy }}
-        >
           <div
             className="relative"
             style={{
