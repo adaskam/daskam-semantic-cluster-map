@@ -301,11 +301,27 @@ function MindMap({
   active: number;
   onActiveChange: (i: number) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth;
+      setScale(Math.min(1, w / STAGE.w));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className="relative w-full h-full overflow-auto">
+    <div ref={containerRef} className="relative w-full" style={{ height: STAGE.h * scale }}>
       <div
-        className="relative mx-auto"
-        style={{ width: STAGE.w, height: STAGE.h }}
+        className="relative origin-top-left"
+        style={{ width: STAGE.w, height: STAGE.h, transform: `scale(${scale})` }}
       >
         <svg
           width={STAGE.w}
