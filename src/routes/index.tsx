@@ -132,7 +132,7 @@ function Index() {
 
         {cluster && (
           <>
-            <section className={cn("node-card relative", zoom > 1 ? "overflow-auto" : "overflow-hidden")}>
+            <section className="node-card relative overflow-hidden">
               <MindMap
                 cluster={cluster}
                 positions={positions}
@@ -310,6 +310,9 @@ function MindMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [fitScale, setFitScale] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
 
   const MIN_ZOOM = 0.5;
   const MAX_ZOOM = 3;
@@ -329,16 +332,83 @@ function MindMap({
   }, []);
 
   const finalScale = fitScale * zoom;
+  const scaledW = STAGE.w * finalScale;
+  const scaledH = STAGE.h * finalScale;
+  const viewW = containerRef.current?.clientWidth ?? STAGE.w;
+  const viewH = STAGE.h * fitScale;
+
+  const clampPan = (next: { x: number; y: number }) => {
+    const minX = Math.min(0, viewW - scaledW);
+    const minY = Math.min(0, viewH - scaledH);
+    return {
+      x: Math.max(minX, Math.min(0, next.x)),
+      y: Math.max(minY, Math.min(0, next.y)),
+    };
+  };
 
   const zoomIn = () => onZoomChange(Math.min(MAX_ZOOM, zoom + STEP));
   const zoomOut = () => onZoomChange(Math.max(MIN_ZOOM, zoom - STEP));
-  const resetZoom = () => onZoomChange(1);
+  const resetZoom = () => {
+    onZoomChange(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const startDrag = (clientX: number, clientY: number) => {
+    dragRef.current = { startX: clientX, startY: clientY, panX: pan.x, panY: pan.y };
+    setIsDragging(true);
+  };
+
+  const moveDrag = (clientX: number, clientY: number) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const x = d.panX + (clientX - d.startX);
+    const y = d.panY + (clientY - d.startY);
+    setPan(clampPan({ x, y }));
+  };
+
+  const endDrag = () => {
+    dragRef.current = null;
+    setIsDragging(false);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("button, [role='button'], a, input, textarea, select")) return;
+    startDrag(e.clientX, e.clientY);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    moveDrag(e.clientX, e.clientY);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button, [role='button'], a, input, textarea, select")) return;
+    const t = e.touches[0];
+    startDrag(t.clientX, t.clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const t = e.touches[0];
+    moveDrag(t.clientX, t.clientY);
+  };
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full"
-      style={{ height: STAGE.h * finalScale }}
+      className={cn(
+        "relative w-full overflow-hidden touch-none",
+        isDragging ? "cursor-grabbing" : "cursor-grab",
+      )}
+      style={{ height: STAGE.h * fitScale }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={endDrag}
+      onMouseLeave={endDrag}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={endDrag}
     >
       <div className="absolute top-3 right-3 z-30 flex items-center gap-1 rounded-lg border border-border/60 bg-background/80 p-1 backdrop-blur-sm shadow-sm">
         <button
@@ -374,8 +444,8 @@ function MindMap({
       </div>
 
       <div
-        className="relative origin-top-left"
-        style={{ width: STAGE.w, height: STAGE.h, transform: `scale(${finalScale})` }}
+        className="absolute top-0 left-0 origin-top-left select-none"
+        style={{ width: STAGE.w, height: STAGE.h, transform: `translate(${pan.x}px, ${pan.y}px) scale(${finalScale})` }}
       >
         <svg
           width={STAGE.w}
