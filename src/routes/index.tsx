@@ -106,10 +106,11 @@ function Index() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header
-        topic={topic}
-        setTopic={setTopic}
-        onSubmit={onTopicSubmit}
-        isPending={topicMutation.isPending}
+        showNewMap={!!cluster}
+        onNewMap={() => {
+          setCluster(null);
+          topicMutation.reset();
+        }}
       />
 
       <main
