@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { generateText, Output } from "ai";
+import { generateText } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
@@ -20,6 +20,20 @@ export type Cluster = z.infer<typeof ClusterSchema>;
 
 const InputSchema = z.object({ topic: z.string().min(2).max(200) });
 
+function extractJsonObject(text: string) {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1]?.trim();
+  const candidate = fenced || trimmed;
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("The AI response was not valid JSON. Please try again.");
+  }
+
+  return JSON.parse(candidate.slice(start, end + 1));
+}
+
 export const generateCluster = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => InputSchema.parse(d))
   .handler(async ({ data }) => {
@@ -28,14 +42,40 @@ export const generateCluster = createServerFn({ method: "POST" })
 
     const gateway = createLovableAiGatewayProvider(key);
 
-    const { experimental_output } = await generateText({
+    const { text } = await generateText({
       model: gateway("google/gemini-3-flash-preview"),
-      experimental_output: Output.object({ schema: ClusterSchema }),
       maxOutputTokens: 8192,
       system:
-        "You are an expert SEO content strategist. Given a primary topic, design a semantic content cluster with exactly 4-5 secondary content pillars. Each pillar must include: a title, a 1-2 sentence description, 3-6 specific blog post titles (articles), 4-8 realistic SEO keywords, and 2-5 internal link suggestions referencing other pillars/articles in this cluster. Be specific, modern, and actionable.",
-      prompt: `Primary topic: "${data.topic}"\n\nReturn a content cluster following the schema exactly.`,
+        "You are an expert SEO content strategist. Return only valid JSON. Do not include markdown, prose, comments, or trailing commas.",
+      prompt: `Create a semantic content cluster for the primary topic: "${data.topic}".
+
+Return exactly this JSON object shape:
+{
+  "primaryTopic": "${data.topic}",
+  "pillars": [
+    {
+      "title": "Secondary content pillar",
+      "description": "1-2 sentence strategic description.",
+      "articles": ["Specific blog/article title", "Specific blog/article title", "Specific blog/article title"],
+      "keywords": ["realistic SEO keyword", "realistic SEO keyword", "realistic SEO keyword", "realistic SEO keyword"],
+      "internalLinks": ["Linking recommendation referencing another pillar or article", "Linking recommendation referencing another pillar or article"]
+    }
+  ]
+}
+
+Requirements:
+- Include 4 to 5 pillars.
+- Each pillar has 3 to 6 article titles.
+- Each pillar has 4 to 8 recommended keywords.
+- Each pillar has 2 to 5 internal linking recommendations.
+- Be specific, modern, and actionable.
+- Output JSON only.`,
     });
 
-    return experimental_output as Cluster;
+    try {
+      return ClusterSchema.parse(extractJsonObject(text));
+    } catch (error) {
+      console.error("Cluster JSON parse/validation failed", error, text);
+      throw new Error("The AI returned an incomplete cluster. Please try generating again.");
+    }
   });
