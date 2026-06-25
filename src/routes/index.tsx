@@ -719,6 +719,11 @@ function MindMap({
           className="absolute inset-0 pointer-events-none"
         >
         <defs>
+          <radialGradient id="heat-glow">
+            <stop offset="0%" stopColor="white" stopOpacity="0.95" />
+            <stop offset="40%" stopColor="white" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </radialGradient>
           {cluster.pillars.map((_, i) => {
             const p = positions[i];
             return (
@@ -737,6 +742,44 @@ function MindMap({
             );
           })}
         </defs>
+
+        {/* Heat map glow over matching clusters */}
+        {hasQuery &&
+          cluster.pillars.map((_, i) => {
+            const score = pillarScores[i];
+            if (score <= 0) return null;
+            const p = positions[i];
+            const color = PILLAR_COLORS[i % PILLAR_COLORS.length];
+            const intensity = 0.35 + 0.55 * (score / maxScore);
+            const radius = 130 + 60 * (score / maxScore);
+            return (
+              <g key={`heat-${i}`} style={{ color }}>
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={radius}
+                  fill="url(#heat-glow)"
+                  className="animate-heat-pulse"
+                  style={{
+                    color,
+                    mixBlendMode: "screen",
+                    ["--heat-min" as never]: String(intensity * 0.5),
+                    ["--heat-max" as never]: String(intensity),
+                  }}
+                />
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={radius * 0.55}
+                  fill={color}
+                  opacity={intensity * 0.25}
+                  className="animate-heat-pulse"
+                  style={{ mixBlendMode: "screen" }}
+                />
+              </g>
+            );
+          })}
+
 
           {cluster.pillars.map((_, i) => {
             const p = positions[i];
