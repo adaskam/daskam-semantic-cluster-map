@@ -241,7 +241,15 @@ export function EditExportDialog({ open, onOpenChange, cluster }: Props) {
             </div>
           </ScrollArea>
 
-          <aside className="bg-secondary/20 flex flex-col">
+          <PreviewPane
+            cluster={draft}
+            logoDataUrl={logoDataUrl}
+            logoPlacement={logoPlacement}
+            logoSize={logoSize}
+          />
+
+          <aside className="bg-secondary/20 flex flex-col border-l border-border/60">
+
             <ScrollArea className="flex-1">
               <div className="p-5 space-y-5">
                 <div>
