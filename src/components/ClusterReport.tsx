@@ -53,18 +53,77 @@ const GridBackground = () => (
   />
 );
 
+export type LogoPlacement = "left" | "center" | "right";
+export type LogoSize = "s" | "m" | "l";
+
+const LOGO_HEIGHTS: Record<LogoSize, number> = { s: 28, m: 44, l: 64 };
+const LOGO_MAX_WIDTHS: Record<LogoSize, number> = { s: 110, m: 170, l: 240 };
+
 export function ClusterReport({
   cluster,
   logoDataUrl,
+  logoPlacement = "left",
+  logoSize = "m",
 }: {
   cluster: Cluster;
   logoDataUrl?: string | null;
+  logoPlacement?: LogoPlacement;
+  logoSize?: LogoSize;
 }) {
   const date = new Date()
     .toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" })
     .toUpperCase();
 
   const plateTotal = cluster.pillars.length;
+  const logoH = LOGO_HEIGHTS[logoSize];
+  const logoMaxW = LOGO_MAX_WIDTHS[logoSize];
+
+  const renderLogo = () =>
+    logoDataUrl ? (
+      <img
+        src={logoDataUrl}
+        alt="Brand logo"
+        style={{
+          height: logoH,
+          maxHeight: logoH,
+          maxWidth: logoMaxW,
+          width: "auto",
+          objectFit: "contain",
+          display: "block",
+        }}
+      />
+    ) : (
+      <div
+        style={{
+          width: 28,
+          height: 28,
+          border: `1.5px solid ${ACCENT}`,
+          borderRadius: "50%",
+          position: "relative",
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            width: 1.5,
+            height: 14,
+            background: ACCENT,
+            top: 7,
+            left: "calc(50% - 0.75px)",
+          }}
+        />
+        <span
+          style={{
+            position: "absolute",
+            width: 14,
+            height: 1.5,
+            background: ACCENT,
+            left: 7,
+            top: "calc(50% - 0.75px)",
+          }}
+        />
+      </div>
+    );
 
   return (
     <article
@@ -88,67 +147,34 @@ export function ClusterReport({
       >
         <GridBackground />
 
-        <div
-          style={{
-            position: "relative",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            {logoDataUrl ? (
-              <img
-                src={logoDataUrl}
-                alt="Brand logo"
-                style={{
-                  maxHeight: 36,
-                  maxWidth: 140,
-                  objectFit: "contain",
-                  display: "block",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  border: `1.5px solid ${ACCENT}`,
-                  borderRadius: "50%",
-                  position: "relative",
-                }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    margin: "auto",
-                    width: 1.5,
-                    height: 14,
-                    background: ACCENT,
-                    top: 7,
-                    left: "calc(50% - 0.75px)",
-                  }}
-                />
-                <span
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    margin: "auto",
-                    width: 14,
-                    height: 1.5,
-                    background: ACCENT,
-                    left: 7,
-                    top: "calc(50% - 0.75px)",
-                  }}
-                />
-              </div>
-            )}
-            <span style={eyebrow}>Cluster Atlas · Vol. 01</span>
+        {logoPlacement === "center" ? (
+          <>
+            <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={eyebrow}>Cluster Atlas · Vol. 01</span>
+              <span style={eyebrow}>{date}</span>
+            </div>
+            <div style={{ position: "relative", display: "flex", justifyContent: "center", marginTop: 28 }}>
+              {renderLogo()}
+            </div>
+          </>
+        ) : (
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              flexDirection: logoPlacement === "right" ? "row-reverse" : "row",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flexDirection: logoPlacement === "right" ? "row-reverse" : "row" }}>
+              {renderLogo()}
+              <span style={eyebrow}>Cluster Atlas · Vol. 01</span>
+            </div>
+            <span style={eyebrow}>{date}</span>
           </div>
-          <span style={eyebrow}>{date}</span>
-        </div>
+        )}
 
         <div style={{ position: "relative", marginTop: 44 }}>
           <div
