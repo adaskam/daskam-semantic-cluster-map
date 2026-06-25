@@ -106,10 +106,11 @@ function Index() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header
-        topic={topic}
-        setTopic={setTopic}
-        onSubmit={onTopicSubmit}
-        isPending={topicMutation.isPending}
+        showNewMap={!!cluster}
+        onNewMap={() => {
+          setCluster(undefined);
+          topicMutation.reset();
+        }}
       />
 
       <main
@@ -260,15 +261,11 @@ function DocumentCanvas({
 
 
 function Header({
-  topic,
-  setTopic,
-  onSubmit,
-  isPending,
+  showNewMap,
+  onNewMap,
 }: {
-  topic: string;
-  setTopic: (t: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  isPending: boolean;
+  showNewMap: boolean;
+  onNewMap: () => void;
 }) {
   return (
     <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
@@ -283,34 +280,21 @@ function Header({
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="flex-1 flex gap-2 max-w-xl ml-auto">
-          <div className="relative flex-1">
-            <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary" />
-            <Input
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="Primary topic — e.g. Enterprise Cloud Security"
-              aria-label="Primary topic"
-              className="pl-10 h-10 bg-input border-border focus-visible:ring-primary"
-              disabled={isPending}
-            />
-          </div>
+        {showNewMap && (
           <Button
-            type="submit"
-            disabled={isPending || topic.trim().length < 2}
-            className="h-10 px-3 md:px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
+            type="button"
+            onClick={onNewMap}
+            variant="outline"
+            className="ml-auto h-10 px-4 font-medium"
           >
-            {isPending ? (
-              <><Loader2 className="size-4 animate-spin" /> <span className="hidden md:inline">Mapping</span></>
-            ) : (
-              <><Sparkles className="size-4 md:mr-1" /> <span className="hidden md:inline">Map</span></>
-            )}
+            <Sparkles className="size-4 mr-1" /> New map
           </Button>
-        </form>
+        )}
       </div>
     </header>
   );
 }
+
 
 function HeroSection({
   topic,
