@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { generateCluster, type Cluster } from "@/lib/cluster.functions";
+import { generateCluster, generateGapCluster, type Cluster } from "@/lib/cluster.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Download, FileText, FileDown, ImagePlus, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Download, FileText, FileDown, ImagePlus, X, Target, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportMarkdown, exportPDF } from "@/lib/export-strategy";
 import {
@@ -73,22 +74,48 @@ function articlePositions(px: number, py: number, angle: number, count: number) 
   });
 }
 
+type Mode = "topic" | "gap";
+
 function Index() {
+  const [mode, setMode] = useState<Mode>("topic");
   const [topic, setTopic] = useState("");
+  const [url, setUrl] = useState("");
+  const [seedKeywords, setSeedKeywords] = useState("");
+  const [goals, setGoals] = useState("");
+  const [competitors, setCompetitors] = useState("");
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(1);
 
-  const mutation = useMutation({
+  const topicMutation = useMutation({
     mutationFn: (t: string) => generateCluster({ data: { topic: t } }),
     onSuccess: () => setActive(0),
   });
 
-  const cluster: Cluster | undefined = mutation.data;
+  const gapMutation = useMutation({
+    mutationFn: (vars: { url: string; keywords: string; goals: string; competitors: string }) =>
+      generateGapCluster({ data: vars }),
+    onSuccess: () => setActive(0),
+  });
 
-  const onSubmit = (e: React.FormEvent) => {
+  const activeMutation = mode === "topic" ? topicMutation : gapMutation;
+  const cluster: Cluster | undefined = (topicMutation.data ?? gapMutation.data) as Cluster | undefined;
+  const lastData = mode === "topic" ? topicMutation.data : gapMutation.data;
+
+  const onTopicSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (topic.trim().length < 2) return;
-    mutation.mutate(topic.trim());
+    topicMutation.mutate(topic.trim());
+  };
+
+  const onGapSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (url.trim().length < 3 || seedKeywords.trim().length < 2) return;
+    gapMutation.mutate({
+      url: url.trim(),
+      keywords: seedKeywords.trim(),
+      goals: goals.trim(),
+      competitors: competitors.trim(),
+    });
   };
 
   const pillars = cluster?.pillars ?? [];
@@ -97,41 +124,54 @@ function Index() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header
+        mode={mode}
         topic={topic}
         setTopic={setTopic}
-        onSubmit={onSubmit}
-        isPending={mutation.isPending}
+        onSubmit={onTopicSubmit}
+        isPending={activeMutation.isPending}
+        showInput={mode === "topic"}
       />
 
       <main
         className={cn(
           "flex-1 p-6 max-w-[1600px] w-full mx-auto",
-          cluster
+          lastData
             ? "grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6"
-            : "flex flex-col items-center justify-start pt-12 lg:pt-20",
+            : "flex flex-col items-center justify-start pt-8 lg:pt-14",
         )}
       >
-        {!cluster && !mutation.isPending && !mutation.isError && (
+        {!lastData && !activeMutation.isPending && !activeMutation.isError && (
           <HeroSection
+            mode={mode}
+            setMode={setMode}
             topic={topic}
             setTopic={setTopic}
-            onSubmit={onSubmit}
-            isPending={mutation.isPending}
+            url={url}
+            setUrl={setUrl}
+            seedKeywords={seedKeywords}
+            setSeedKeywords={setSeedKeywords}
+            goals={goals}
+            setGoals={setGoals}
+            competitors={competitors}
+            setCompetitors={setCompetitors}
+            onTopicSubmit={onTopicSubmit}
+            onGapSubmit={onGapSubmit}
+            isPending={activeMutation.isPending}
           />
         )}
 
-        {mutation.isPending && (
+        {activeMutation.isPending && (
           <section className="node-card relative overflow-hidden min-h-[760px] w-full">
-            <LoadingState topic={topic} />
+            <LoadingState topic={mode === "topic" ? topic : `${url} — intent gap analysis`} />
           </section>
         )}
 
-        {mutation.isError && !cluster && (
+        {activeMutation.isError && !cluster && (
           <section className="node-card relative overflow-hidden min-h-[760px] w-full grid place-items-center p-8 text-center">
             <div className="max-w-sm">
               <p className="text-destructive font-medium mb-2">Couldn't generate cluster</p>
               <p className="text-sm text-muted-foreground">
-                {(mutation.error as Error)?.message || "Try again in a moment."}
+                {(activeMutation.error as Error)?.message || "Try again in a moment."}
               </p>
             </div>
           </section>
@@ -164,16 +204,21 @@ function Index() {
   );
 }
 
+
 function Header({
+  mode,
   topic,
   setTopic,
   onSubmit,
   isPending,
+  showInput,
 }: {
+  mode: Mode;
   topic: string;
   setTopic: (t: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   isPending: boolean;
+  showInput: boolean;
 }) {
   return (
     <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
@@ -188,105 +233,249 @@ function Header({
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="flex-1 flex gap-2 max-w-xl ml-auto">
-          <div className="relative flex-1">
-            <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary" />
+        {showInput && (
+          <form onSubmit={onSubmit} className="flex-1 flex gap-2 max-w-xl ml-auto">
+            <div className="relative flex-1">
+              <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary" />
+              <Input
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="Primary topic — e.g. Enterprise Cloud Security"
+                aria-label="Primary topic"
+                className="pl-10 h-10 bg-input border-border focus-visible:ring-primary"
+                disabled={isPending}
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={isPending || topic.trim().length < 2}
+              className="h-10 px-3 md:px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
+            >
+              {isPending ? (
+                <><Loader2 className="size-4 animate-spin" /> <span className="hidden md:inline">Mapping</span></>
+              ) : (
+                <><Sparkles className="size-4 md:mr-1" /> <span className="hidden md:inline">Map</span></>
+              )}
+            </Button>
+          </form>
+        )}
+        {!showInput && (
+          <div className="ml-auto hidden md:flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
+            <Target className="size-3.5 text-primary" />
+            {mode === "gap" ? "Intent Gap Analysis" : "Topic Map"}
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
+
+function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
+  const tabs: { id: Mode; label: string; icon: typeof Sparkles; sub: string }[] = [
+    { id: "topic", label: "Topic Map", icon: Sparkles, sub: "From a seed keyword" },
+    { id: "gap", label: "Intent Gap Analysis", icon: Target, sub: "From a URL + competitors" },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2 p-1 rounded-xl border border-border/60 bg-secondary/30">
+      {tabs.map((t) => {
+        const Icon = t.icon;
+        const active = mode === t.id;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setMode(t.id)}
+            className={cn(
+              "flex flex-col items-start text-left px-3 py-2.5 rounded-lg transition-colors",
+              active
+                ? "bg-background shadow-sm border border-border/60"
+                : "hover:bg-background/50 text-muted-foreground",
+            )}
+          >
+            <span className="flex items-center gap-2 text-sm font-medium">
+              <Icon className={cn("size-4", active ? "text-primary" : "text-muted-foreground")} />
+              {t.label}
+            </span>
+            <span className="text-[11px] text-muted-foreground mt-0.5">{t.sub}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function HeroSection({
+  mode,
+  setMode,
+  topic,
+  setTopic,
+  url,
+  setUrl,
+  seedKeywords,
+  setSeedKeywords,
+  goals,
+  setGoals,
+  competitors,
+  setCompetitors,
+  onTopicSubmit,
+  onGapSubmit,
+  isPending,
+}: {
+  mode: Mode;
+  setMode: (m: Mode) => void;
+  topic: string;
+  setTopic: (t: string) => void;
+  url: string;
+  setUrl: (v: string) => void;
+  seedKeywords: string;
+  setSeedKeywords: (v: string) => void;
+  goals: string;
+  setGoals: (v: string) => void;
+  competitors: string;
+  setCompetitors: (v: string) => void;
+  onTopicSubmit: (e: React.FormEvent) => void;
+  onGapSubmit: (e: React.FormEvent) => void;
+  isPending: boolean;
+}) {
+  return (
+    <div className="w-full max-w-2xl mx-auto text-center">
+      <div className="size-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center mb-6 animate-pulse-ring">
+        {mode === "topic" ? (
+          <Network className="size-10 text-primary" />
+        ) : (
+          <Compass className="size-10 text-primary" />
+        )}
+      </div>
+
+      <h2 className="text-3xl md:text-4xl font-semibold text-glow">
+        {mode === "topic" ? "Map a content universe" : "Find your intent gaps"}
+      </h2>
+      <p className="text-base text-muted-foreground mt-3 max-w-md mx-auto">
+        {mode === "topic"
+          ? "Enter a primary topic and we'll generate a complete semantic content cluster: pillars, article ideas, keywords, and internal linking strategy."
+          : "Add your site, seed keywords, goals, and competitors. We'll map content opportunities based on search intent gaps."}
+      </p>
+
+      <div className="mt-6 text-left">
+        <ModeTabs mode={mode} setMode={setMode} />
+      </div>
+
+      {mode === "topic" ? (
+        <form onSubmit={onTopicSubmit} className="mt-6 flex flex-col gap-3">
+          <label htmlFor="primary-topic" className="text-sm font-medium text-left text-muted-foreground">
+            Primary Topic
+          </label>
+          <div className="relative w-full">
+            <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-primary" />
             <Input
+              id="primary-topic"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="Primary topic — e.g. Enterprise Cloud Security"
+              placeholder="e.g. Enterprise Cloud Security"
               aria-label="Primary topic"
-              className="pl-10 h-10 bg-input border-border focus-visible:ring-primary"
+              className="pl-12 h-14 text-lg bg-input border-border focus-visible:ring-primary w-full"
               disabled={isPending}
             />
           </div>
           <Button
             type="submit"
             disabled={isPending || topic.trim().length < 2}
-            className="h-10 px-3 md:px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
+            className="h-14 px-8 text-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
           >
             {isPending ? (
-              <><Loader2 className="size-4 animate-spin" /> <span className="hidden md:inline">Mapping</span></>
+              <><Loader2 className="size-5 animate-spin" /> Mapping…</>
             ) : (
-              <><Sparkles className="size-4 md:mr-1" /> <span className="hidden md:inline">Map</span></>
+              "Generate cluster map"
+            )}
+          </Button>
+
+          <div className="mt-2">
+            <p className="text-xs text-muted-foreground mb-2">Try an example</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {EXAMPLE_TOPICS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setTopic(s)}
+                  className="inline-flex items-center rounded-md border border-transparent bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        </form>
+      ) : (
+        <form onSubmit={onGapSubmit} className="mt-6 flex flex-col gap-4 text-left">
+          <div className="grid gap-2">
+            <label htmlFor="gap-url" className="text-sm font-medium text-muted-foreground">
+              Company URL <span className="text-destructive">*</span>
+            </label>
+            <Input
+              id="gap-url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="e.g. https://yourcompany.com"
+              className="h-12 bg-input border-border focus-visible:ring-primary"
+              disabled={isPending}
+            />
+          </div>
+          <div className="grid gap-2">
+            <label htmlFor="gap-keywords" className="text-sm font-medium text-muted-foreground">
+              Seed Keywords <span className="text-destructive">*</span>
+            </label>
+            <Textarea
+              id="gap-keywords"
+              value={seedKeywords}
+              onChange={(e) => setSeedKeywords(e.target.value)}
+              placeholder="Comma-separated, e.g. zero trust, cloud workload protection, SASE"
+              className="min-h-[72px] bg-input border-border focus-visible:ring-primary"
+              disabled={isPending}
+            />
+          </div>
+          <div className="grid gap-2">
+            <label htmlFor="gap-goals" className="text-sm font-medium text-muted-foreground">
+              Business Goals <span className="text-muted-foreground/60 font-normal">(optional)</span>
+            </label>
+            <Textarea
+              id="gap-goals"
+              value={goals}
+              onChange={(e) => setGoals(e.target.value)}
+              placeholder="e.g. Capture mid-market buyers, drive demo requests, rank for evaluation-stage queries"
+              className="min-h-[64px] bg-input border-border focus-visible:ring-primary"
+              disabled={isPending}
+            />
+          </div>
+          <div className="grid gap-2">
+            <label htmlFor="gap-competitors" className="text-sm font-medium text-muted-foreground">
+              Competitors <span className="text-muted-foreground/60 font-normal">(optional)</span>
+            </label>
+            <Textarea
+              id="gap-competitors"
+              value={competitors}
+              onChange={(e) => setCompetitors(e.target.value)}
+              placeholder="Domains or names, e.g. wiz.io, crowdstrike.com, Palo Alto Networks"
+              className="min-h-[64px] bg-input border-border focus-visible:ring-primary"
+              disabled={isPending}
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={isPending || url.trim().length < 3 || seedKeywords.trim().length < 2}
+            className="h-14 px-8 text-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+          >
+            {isPending ? (
+              <><Loader2 className="size-5 animate-spin" /> Analyzing gaps…</>
+            ) : (
+              <><Target className="size-5 mr-1" /> Map intent gaps</>
             )}
           </Button>
         </form>
-      </div>
-    </header>
-  );
-}
-
-function HeroSection({
-  topic,
-  setTopic,
-  onSubmit,
-  isPending,
-}: {
-  topic: string;
-  setTopic: (t: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  isPending: boolean;
-}) {
-  return (
-    <div className="w-full max-w-2xl mx-auto text-center">
-      <div className="size-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center mb-6 animate-pulse-ring">
-        <Network className="size-10 text-primary" />
-      </div>
-
-      <h2 className="text-3xl md:text-4xl font-semibold text-glow">Map a content universe</h2>
-      <p className="text-base text-muted-foreground mt-3 max-w-md mx-auto">
-        Enter a primary topic and we'll generate a complete semantic content cluster: pillars,
-        article ideas, keywords, and internal linking strategy.
-      </p>
-
-      <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-3">
-        <label htmlFor="primary-topic" className="text-sm font-medium text-left md:text-center text-muted-foreground">
-          Primary Topic
-        </label>
-        <div className="relative w-full">
-          <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-primary" />
-          <Input
-            id="primary-topic"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder="e.g. Enterprise Cloud Security"
-            aria-label="Primary topic"
-            className="pl-12 h-14 text-lg bg-input border-border focus-visible:ring-primary w-full"
-            disabled={isPending}
-          />
-        </div>
-        <Button
-          type="submit"
-          disabled={isPending || topic.trim().length < 2}
-          className="h-14 px-8 text-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
-        >
-          {isPending ? (
-            <><Loader2 className="size-5 animate-spin" /> Mapping…</>
-          ) : (
-            "Generate cluster map"
-          )}
-        </Button>
-      </form>
-
-      <div className="mt-6">
-        <p className="text-xs text-muted-foreground mb-2">Try an example</p>
-        <div className="flex flex-wrap gap-2 justify-center">
-          {EXAMPLE_TOPICS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setTopic(s)}
-              className="inline-flex items-center rounded-md border border-transparent bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
+
 
 function LoadingState({ topic }: { topic: string }) {
   return (
@@ -819,16 +1008,43 @@ function SidePanel({
       )}
 
 
+      {cluster?.mode === "gap" && cluster.gapSummary && (
+        <div className="node-card p-5 border-primary/40">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="size-4 text-primary" />
+            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-primary">
+              Intent gap summary
+            </p>
+          </div>
+          <p className="text-sm leading-relaxed text-foreground/90">{cluster.gapSummary}</p>
+        </div>
+      )}
+
       <div className="node-card p-5">
         <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
           Active cluster
         </p>
         {pillar ? (
           <>
-            <h3 className="text-xl font-semibold mt-1 leading-tight">{pillar.title}</h3>
+            <div className="flex items-start justify-between gap-3 mt-1">
+              <h3 className="text-xl font-semibold leading-tight">{pillar.title}</h3>
+              {pillar.intent && (
+                <span className="shrink-0 mt-1 text-[10px] uppercase tracking-wider font-mono px-2 py-0.5 rounded-md bg-primary/15 text-primary border border-primary/30">
+                  {pillar.intent}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
               {pillar.description}
             </p>
+            {pillar.opportunity && (
+              <div className="mt-3 pt-3 border-t border-border/60">
+                <p className="text-[10px] uppercase tracking-[0.18em] font-mono text-accent mb-1">
+                  Opportunity
+                </p>
+                <p className="text-sm leading-relaxed text-foreground/90">{pillar.opportunity}</p>
+              </div>
+            )}
           </>
         ) : (
           <p className="text-sm text-muted-foreground mt-2">
@@ -836,6 +1052,7 @@ function SidePanel({
           </p>
         )}
       </div>
+
 
       <div className="node-card p-5">
         <div className="flex items-center gap-2 mb-3">
