@@ -218,7 +218,7 @@ function Header() {
 
 function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
   const tabs: { id: Mode; label: string; icon: typeof Sparkles; sub: string }[] = [
-    { id: "topic", label: "Topic Map", icon: Sparkles, sub: "From a seed keyword" },
+    { id: "topic", label: "Topic Map", icon: Sparkles, sub: "From seed keywords" },
     { id: "gap", label: "Intent Gap Analysis", icon: Target, sub: "From a URL + seed keyword(s)" },
   ];
   return (
