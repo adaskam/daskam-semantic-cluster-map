@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, FileDown, FileText, Plus, Trash2, ImagePlus, X, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportMarkdown, exportPDF, type LogoPlacement, type LogoSize } from "@/lib/export-strategy";
+import { ClusterReport } from "@/components/ClusterReport";
 
 type Props = {
   open: boolean;
@@ -112,7 +113,7 @@ export function EditExportDialog({ open, onOpenChange, cluster }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl p-0 gap-0 max-h-[92vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[1400px] w-[95vw] p-0 gap-0 max-h-[92vh] overflow-hidden flex flex-col">
         <DialogHeader className="px-6 pt-5 pb-4 border-b border-border/60 shrink-0">
           <DialogTitle className="text-xl">Review & edit before export</DialogTitle>
           <DialogDescription>
@@ -120,7 +121,7 @@ export function EditExportDialog({ open, onOpenChange, cluster }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[1fr_300px]">
+        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)_280px]">
           <ScrollArea className="border-r border-border/60">
             <div className="p-6 space-y-6">
               <section className="space-y-2">
@@ -240,7 +241,15 @@ export function EditExportDialog({ open, onOpenChange, cluster }: Props) {
             </div>
           </ScrollArea>
 
-          <aside className="bg-secondary/20 flex flex-col">
+          <PreviewPane
+            cluster={draft}
+            logoDataUrl={logoDataUrl}
+            logoPlacement={logoPlacement}
+            logoSize={logoSize}
+          />
+
+          <aside className="bg-secondary/20 flex flex-col border-l border-border/60">
+
             <ScrollArea className="flex-1">
               <div className="p-5 space-y-5">
                 <div>
@@ -338,6 +347,90 @@ export function EditExportDialog({ open, onOpenChange, cluster }: Props) {
     </Dialog>
   );
 }
+
+const REPORT_WIDTH = 794;
+
+function PreviewPane({
+  cluster,
+  logoDataUrl,
+  logoPlacement,
+  logoSize,
+}: {
+  cluster: Cluster;
+  logoDataUrl: string | null;
+  logoPlacement: LogoPlacement;
+  logoSize: LogoSize;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.5);
+  const [innerH, setInnerH] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth - 32;
+      setScale(Math.min(1, Math.max(0.25, w / REPORT_WIDTH)));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setInnerH(el.scrollHeight));
+    ro.observe(el);
+    setInnerH(el.scrollHeight);
+    return () => ro.disconnect();
+  }, [cluster, logoDataUrl, logoPlacement, logoSize]);
+
+  return (
+    <div className="hidden md:flex flex-col bg-[#e7e1d2]/40 border-l border-border/60 min-h-0">
+      <div className="px-4 py-2.5 border-b border-border/60 flex items-center justify-between shrink-0 bg-background/60">
+        <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
+          Live PDF preview
+        </p>
+        <p className="text-[10px] font-mono text-muted-foreground">{Math.round(scale * 100)}%</p>
+      </div>
+      <div ref={containerRef} className="flex-1 min-h-0 overflow-auto p-4">
+        <div
+          style={{
+            width: REPORT_WIDTH * scale,
+            height: innerH * scale,
+            margin: "0 auto",
+            position: "relative",
+          }}
+        >
+          <div
+            ref={innerRef}
+            style={{
+              width: REPORT_WIDTH,
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              position: "absolute",
+              top: 0,
+              left: 0,
+            }}
+          >
+            <ClusterReport
+              cluster={cluster}
+              logoDataUrl={logoDataUrl}
+              logoPlacement={logoPlacement}
+              logoSize={logoSize}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 
 function Label({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
