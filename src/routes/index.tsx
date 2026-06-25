@@ -489,6 +489,15 @@ function MindMap({
 
   const finalScale = fitScale * zoom;
 
+  // Semantic zoom levels: 0=galaxy (topic only), 1=cluster (pillars), 2=detail (articles)
+  const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+  const pillarAlpha = clamp01((finalScale - 0.45) / 0.25);
+  const articleAlpha = clamp01((finalScale - 1.0) / 0.3);
+  const galaxyAlpha = 1 - pillarAlpha;
+  const semanticLevel: 0 | 1 | 2 = articleAlpha > 0.5 ? 2 : pillarAlpha > 0.5 ? 1 : 0;
+  const totalArticles = cluster.pillars.reduce((acc, p) => acc + p.articles.length, 0);
+  const levelLabel = semanticLevel === 0 ? "Galaxy" : semanticLevel === 1 ? "Cluster" : "Detail";
+
   // Dynamic search across pillar content -> heat scores per pillar
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
