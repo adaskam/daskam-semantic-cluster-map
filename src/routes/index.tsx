@@ -131,7 +131,7 @@ function Index() {
 
         {cluster && (
           <>
-            <section className="node-card relative overflow-hidden min-h-[760px]">
+            <section className="node-card relative overflow-hidden">
               <MindMap
                 cluster={cluster}
                 positions={positions}
