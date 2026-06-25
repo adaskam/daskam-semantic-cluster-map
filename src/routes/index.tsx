@@ -676,9 +676,38 @@ function MindMap({
         </button>
       </div>
 
+      {/* Dynamic search bar */}
+      <div className="absolute top-3 left-3 z-30 flex items-center gap-1 rounded-lg border border-border/60 bg-background/85 px-2 py-1 backdrop-blur-sm shadow-sm">
+        <Search className="size-4 text-muted-foreground" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search clusters…"
+          aria-label="Search the cluster map"
+          className="h-7 w-44 sm:w-56 bg-transparent text-sm outline-none placeholder:text-muted-foreground/70"
+        />
+        {hasQuery && (
+          <>
+            <span className="text-[10px] font-mono tabular-nums text-muted-foreground px-1">
+              {totalMatches}
+            </span>
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="size-3.5" />
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="pointer-events-none absolute bottom-3 left-3 z-30 rounded-md border border-border/50 bg-background/70 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
         Scroll to pan · ⌘/Ctrl + scroll to zoom · Space + drag
       </div>
+
 
       <div
         className="absolute top-0 left-0 origin-top-left select-none"
