@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { generateCluster, type Cluster } from "@/lib/cluster.functions";
+import { generateCluster, generateGapCluster, type Cluster } from "@/lib/cluster.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Download, FileText, FileDown, ImagePlus, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Download, FileText, FileDown, ImagePlus, X, Target, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportMarkdown, exportPDF } from "@/lib/export-strategy";
 import {
