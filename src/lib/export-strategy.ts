@@ -156,7 +156,7 @@ export async function exportPDF(cluster: Cluster, logoDataUrl?: string | null) {
       while (drawn < heightMm) {
         const slice = Math.min(CONTENT_H_MM, heightMm - drawn);
         pdf.addImage(dataUrl, "JPEG", MARGIN_MM, MARGIN_MM - drawn, widthMm, heightMm);
-        pdf.setFillColor(...PAPER_RGB);
+        pdf.setFillColor(PAPER_RGB[0], PAPER_RGB[1], PAPER_RGB[2]);
         pdf.rect(0, 0, A4_W_MM, MARGIN_MM, "F");
         pdf.rect(0, MARGIN_MM + slice, A4_W_MM, A4_H_MM, "F");
         drawn += slice;
@@ -175,9 +175,9 @@ export async function exportPDF(cluster: Cluster, logoDataUrl?: string | null) {
       pdf.setPage(i);
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(8);
-      pdf.setTextColor(138, 127, 114);
+      pdf.setTextColor(126, 131, 120);
       pdf.text(
-        `${cluster.primaryTopic}  ·  ${String(i).padStart(2, "0")} / ${String(total).padStart(2, "0")}`,
+        `${cluster.primaryTopic.toUpperCase()}  ·  ATLAS  ·  ${String(i).padStart(2, "0")} / ${String(total).padStart(2, "0")}`,
         MARGIN_MM,
         A4_H_MM - 6,
       );
