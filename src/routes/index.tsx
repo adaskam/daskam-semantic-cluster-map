@@ -657,6 +657,8 @@ function SidePanel({
   const pillar = cluster?.pillars[active];
   const [exporting, setExporting] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [logoPlacement, setLogoPlacement] = useState<"left" | "center" | "right">("left");
+  const [logoSize, setLogoSize] = useState<"s" | "m" | "l">("m");
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -665,13 +667,14 @@ function SidePanel({
     const reader = new FileReader();
     reader.onload = () => setLogoDataUrl(typeof reader.result === "string" ? reader.result : null);
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handlePdf = async () => {
     if (!cluster) return;
     setExporting(true);
     try {
-      await exportPDF(cluster, logoDataUrl);
+      await exportPDF(cluster, { dataUrl: logoDataUrl, placement: logoPlacement, size: logoSize });
     } finally {
       setExporting(false);
     }
