@@ -123,7 +123,7 @@ function Index() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header mode={mode} />
+      <Header />
 
       <main
         className={cn(
@@ -198,14 +198,10 @@ function Index() {
 }
 
 
-function Header({
-  mode,
-}: {
-  mode: Mode;
-}) {
+function Header() {
   return (
     <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
-      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-4">
+      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center gap-4">
         <div className="flex items-center gap-2 shrink-0">
           <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center">
             <Network className="size-5 text-primary-foreground" />
@@ -214,11 +210,6 @@ function Header({
             <h1 className="text-base font-semibold leading-none">Semantic Cluster Map</h1>
             <p className="text-xs text-muted-foreground mt-1">A cartographer for your keyword strategy</p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
-          <Target className="size-3.5 text-primary" />
-          {mode === "gap" ? "Intent Gap Analysis" : "Topic Map"}
         </div>
       </div>
     </header>
