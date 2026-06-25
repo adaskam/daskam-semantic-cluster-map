@@ -445,9 +445,6 @@ function MindMap({
 
       <div
         className="absolute top-0 left-0 origin-top-left select-none"
-        data-zoom={zoom}
-        data-fit-scale={fitScale}
-        data-final-scale={finalScale}
         style={{ width: STAGE.w, height: STAGE.h, transform: `translate(${pan.x}px, ${pan.y}px) scale(${finalScale})` }}
       >
         <svg
