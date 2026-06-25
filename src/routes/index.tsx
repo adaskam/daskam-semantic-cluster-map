@@ -167,19 +167,15 @@ function Index() {
 
 
 function Header({
-  mode,
   topic,
   setTopic,
   onSubmit,
   isPending,
-  showInput,
 }: {
-  mode: Mode;
   topic: string;
   setTopic: (t: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   isPending: boolean;
-  showInput: boolean;
 }) {
   return (
     <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
@@ -194,248 +190,105 @@ function Header({
           </div>
         </div>
 
-        {showInput && (
-          <form onSubmit={onSubmit} className="flex-1 flex gap-2 max-w-xl ml-auto">
-            <div className="relative flex-1">
-              <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary" />
-              <Input
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="Primary topic — e.g. Enterprise Cloud Security"
-                aria-label="Primary topic"
-                className="pl-10 h-10 bg-input border-border focus-visible:ring-primary"
-                disabled={isPending}
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={isPending || topic.trim().length < 2}
-              className="h-10 px-3 md:px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
-            >
-              {isPending ? (
-                <><Loader2 className="size-4 animate-spin" /> <span className="hidden md:inline">Mapping</span></>
-              ) : (
-                <><Sparkles className="size-4 md:mr-1" /> <span className="hidden md:inline">Map</span></>
-              )}
-            </Button>
-          </form>
-        )}
-        {!showInput && (
-          <div className="ml-auto hidden md:flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
-            <Target className="size-3.5 text-primary" />
-            {mode === "gap" ? "Intent Gap Analysis" : "Topic Map"}
-          </div>
-        )}
-      </div>
-    </header>
-  );
-}
-
-function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
-  const tabs: { id: Mode; label: string; icon: typeof Sparkles; sub: string }[] = [
-    { id: "topic", label: "Topic Map", icon: Sparkles, sub: "From a seed keyword" },
-    { id: "gap", label: "Intent Gap Analysis", icon: Target, sub: "From a URL + competitors" },
-  ];
-  return (
-    <div className="grid grid-cols-2 gap-2 p-1 rounded-xl border border-border/60 bg-secondary/30">
-      {tabs.map((t) => {
-        const Icon = t.icon;
-        const active = mode === t.id;
-        return (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setMode(t.id)}
-            className={cn(
-              "flex flex-col items-start text-left px-3 py-2.5 rounded-lg transition-colors",
-              active
-                ? "bg-background shadow-sm border border-border/60"
-                : "hover:bg-background/50 text-muted-foreground",
-            )}
-          >
-            <span className="flex items-center gap-2 text-sm font-medium">
-              <Icon className={cn("size-4", active ? "text-primary" : "text-muted-foreground")} />
-              {t.label}
-            </span>
-            <span className="text-[11px] text-muted-foreground mt-0.5">{t.sub}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function HeroSection({
-  mode,
-  setMode,
-  topic,
-  setTopic,
-  url,
-  setUrl,
-  seedKeywords,
-  setSeedKeywords,
-  goals,
-  setGoals,
-  competitors,
-  setCompetitors,
-  onTopicSubmit,
-  onGapSubmit,
-  isPending,
-}: {
-  mode: Mode;
-  setMode: (m: Mode) => void;
-  topic: string;
-  setTopic: (t: string) => void;
-  url: string;
-  setUrl: (v: string) => void;
-  seedKeywords: string;
-  setSeedKeywords: (v: string) => void;
-  goals: string;
-  setGoals: (v: string) => void;
-  competitors: string;
-  setCompetitors: (v: string) => void;
-  onTopicSubmit: (e: React.FormEvent) => void;
-  onGapSubmit: (e: React.FormEvent) => void;
-  isPending: boolean;
-}) {
-  return (
-    <div className="w-full max-w-2xl mx-auto text-center">
-      <div className="size-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center mb-6 animate-pulse-ring">
-        {mode === "topic" ? (
-          <Network className="size-10 text-primary" />
-        ) : (
-          <Compass className="size-10 text-primary" />
-        )}
-      </div>
-
-      <h2 className="text-3xl md:text-4xl font-semibold text-glow">
-        {mode === "topic" ? "Map a content universe" : "Find your intent gaps"}
-      </h2>
-      <p className="text-base text-muted-foreground mt-3 max-w-md mx-auto">
-        {mode === "topic"
-          ? "Enter a primary topic and we'll generate a complete semantic content cluster: pillars, article ideas, keywords, and internal linking strategy."
-          : "Add your site, seed keywords, goals, and competitors. We'll map content opportunities based on search intent gaps."}
-      </p>
-
-      <div className="mt-6 text-left">
-        <ModeTabs mode={mode} setMode={setMode} />
-      </div>
-
-      {mode === "topic" ? (
-        <form onSubmit={onTopicSubmit} className="mt-6 flex flex-col gap-3">
-          <label htmlFor="primary-topic" className="text-sm font-medium text-left text-muted-foreground">
-            Primary Topic
-          </label>
-          <div className="relative w-full">
-            <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-primary" />
+        <form onSubmit={onSubmit} className="flex-1 flex gap-2 max-w-xl ml-auto">
+          <div className="relative flex-1">
+            <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary" />
             <Input
-              id="primary-topic"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. Enterprise Cloud Security"
+              placeholder="Primary topic — e.g. Enterprise Cloud Security"
               aria-label="Primary topic"
-              className="pl-12 h-14 text-lg bg-input border-border focus-visible:ring-primary w-full"
+              className="pl-10 h-10 bg-input border-border focus-visible:ring-primary"
               disabled={isPending}
             />
           </div>
           <Button
             type="submit"
             disabled={isPending || topic.trim().length < 2}
-            className="h-14 px-8 text-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+            className="h-10 px-3 md:px-5 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
           >
             {isPending ? (
-              <><Loader2 className="size-5 animate-spin" /> Mapping…</>
+              <><Loader2 className="size-4 animate-spin" /> <span className="hidden md:inline">Mapping</span></>
             ) : (
-              "Generate cluster map"
+              <><Sparkles className="size-4 md:mr-1" /> <span className="hidden md:inline">Map</span></>
             )}
           </Button>
+        </form>
+      </div>
+    </header>
+  );
+}
 
-          <div className="mt-2">
-            <p className="text-xs text-muted-foreground mb-2">Try an example</p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {EXAMPLE_TOPICS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setTopic(s)}
-                  className="inline-flex items-center rounded-md border border-transparent bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+function HeroSection({
+  topic,
+  setTopic,
+  onTopicSubmit,
+  isPending,
+}: {
+  topic: string;
+  setTopic: (t: string) => void;
+  onTopicSubmit: (e: React.FormEvent) => void;
+  isPending: boolean;
+}) {
+  return (
+    <div className="w-full max-w-2xl mx-auto text-center">
+      <div className="size-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center mb-6 animate-pulse-ring">
+        <Network className="size-10 text-primary" />
+      </div>
+
+      <h2 className="text-3xl md:text-4xl font-semibold text-glow">Map a content universe</h2>
+      <p className="text-base text-muted-foreground mt-3 max-w-md mx-auto">
+        Enter a primary topic and we'll generate a complete semantic content cluster: pillars, article ideas, keywords, and internal linking strategy.
+      </p>
+
+      <form onSubmit={onTopicSubmit} className="mt-8 flex flex-col gap-3">
+        <label htmlFor="primary-topic" className="text-sm font-medium text-left text-muted-foreground">
+          Primary Topic
+        </label>
+        <div className="relative w-full">
+          <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-primary" />
+          <Input
+            id="primary-topic"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="e.g. Enterprise Cloud Security"
+            aria-label="Primary topic"
+            className="pl-12 h-14 text-lg bg-input border-border focus-visible:ring-primary w-full"
+            disabled={isPending}
+          />
+        </div>
+        <Button
+          type="submit"
+          disabled={isPending || topic.trim().length < 2}
+          className="h-14 px-8 text-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+        >
+          {isPending ? (
+            <><Loader2 className="size-5 animate-spin" /> Mapping…</>
+          ) : (
+            "Generate cluster map"
+          )}
+        </Button>
+
+        <div className="mt-2">
+          <p className="text-xs text-muted-foreground mb-2">Try an example</p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {EXAMPLE_TOPICS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setTopic(s)}
+                className="inline-flex items-center rounded-md border border-transparent bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80"
+              >
+                {s}
+              </button>
+            ))}
           </div>
-        </form>
-      ) : (
-        <form onSubmit={onGapSubmit} className="mt-6 flex flex-col gap-4 text-left">
-          <div className="grid gap-2">
-            <label htmlFor="gap-url" className="text-sm font-medium text-muted-foreground">
-              Company URL <span className="text-destructive">*</span>
-            </label>
-            <Input
-              id="gap-url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="e.g. https://yourcompany.com"
-              className="h-12 bg-input border-border focus-visible:ring-primary"
-              disabled={isPending}
-            />
-          </div>
-          <div className="grid gap-2">
-            <label htmlFor="gap-keywords" className="text-sm font-medium text-muted-foreground">
-              Seed Keywords <span className="text-destructive">*</span>
-            </label>
-            <Textarea
-              id="gap-keywords"
-              value={seedKeywords}
-              onChange={(e) => setSeedKeywords(e.target.value)}
-              placeholder="Comma-separated, e.g. zero trust, cloud workload protection, SASE"
-              className="min-h-[72px] bg-input border-border focus-visible:ring-primary"
-              disabled={isPending}
-            />
-          </div>
-          <div className="grid gap-2">
-            <label htmlFor="gap-goals" className="text-sm font-medium text-muted-foreground">
-              Business Goals <span className="text-muted-foreground/60 font-normal">(optional)</span>
-            </label>
-            <Textarea
-              id="gap-goals"
-              value={goals}
-              onChange={(e) => setGoals(e.target.value)}
-              placeholder="e.g. Capture mid-market buyers, drive demo requests, rank for evaluation-stage queries"
-              className="min-h-[64px] bg-input border-border focus-visible:ring-primary"
-              disabled={isPending}
-            />
-          </div>
-          <div className="grid gap-2">
-            <label htmlFor="gap-competitors" className="text-sm font-medium text-muted-foreground">
-              Competitors <span className="text-muted-foreground/60 font-normal">(optional)</span>
-            </label>
-            <Textarea
-              id="gap-competitors"
-              value={competitors}
-              onChange={(e) => setCompetitors(e.target.value)}
-              placeholder="Domains or names, e.g. wiz.io, crowdstrike.com, Palo Alto Networks"
-              className="min-h-[64px] bg-input border-border focus-visible:ring-primary"
-              disabled={isPending}
-            />
-          </div>
-          <Button
-            type="submit"
-            disabled={isPending || url.trim().length < 3 || seedKeywords.trim().length < 2}
-            className="h-14 px-8 text-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
-          >
-            {isPending ? (
-              <><Loader2 className="size-5 animate-spin" /> Analyzing gaps…</>
-            ) : (
-              <><Target className="size-5 mr-1" /> Map intent gaps</>
-            )}
-          </Button>
-        </form>
-      )}
+        </div>
+      </form>
     </div>
   );
 }
+
 
 
 function LoadingState({ topic }: { topic: string }) {
