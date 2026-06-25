@@ -16,9 +16,10 @@ const PillarSchema = z.object({
 const ClusterSchema = z.object({
   primaryTopic: z.string(),
   pillars: z.array(PillarSchema),
-  mode: z.enum(["topic", "gap"]).optional(),
+  mode: z.enum(["topic", "gap", "text"]).optional(),
   gapSummary: z.string().optional(),
 });
+
 
 export type Cluster = z.infer<typeof ClusterSchema>;
 
