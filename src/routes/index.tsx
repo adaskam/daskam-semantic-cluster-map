@@ -658,6 +658,44 @@ function SidePanel({
 
   return (
     <>
+      {cluster && (
+        <div className="node-card p-4 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
+              Hand-off
+            </p>
+            <p className="text-sm font-medium mt-0.5 truncate">Export Strategy</p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                className="h-9 bg-primary text-primary-foreground hover:bg-primary/90 font-medium shrink-0"
+              >
+                <Download className="size-4 mr-1.5" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => exportPDF(cluster)} className="cursor-pointer">
+                <FileDown className="size-4 mr-2 text-primary" />
+                <div className="flex flex-col">
+                  <span className="text-sm">Download PDF</span>
+                  <span className="text-[11px] text-muted-foreground">Print-ready report</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportMarkdown(cluster)} className="cursor-pointer">
+                <FileText className="size-4 mr-2 text-accent" />
+                <div className="flex flex-col">
+                  <span className="text-sm">Download Markdown</span>
+                  <span className="text-[11px] text-muted-foreground">Writer-ready brief</span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+
       <div className="node-card p-5">
         <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
           Active cluster
