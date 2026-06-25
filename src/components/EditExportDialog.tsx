@@ -121,7 +121,7 @@ export function EditExportDialog({ open, onOpenChange, cluster }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[1fr_300px]">
+        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)_280px]">
           <ScrollArea className="border-r border-border/60">
             <div className="p-6 space-y-6">
               <section className="space-y-2">
