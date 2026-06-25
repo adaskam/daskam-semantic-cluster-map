@@ -69,6 +69,7 @@ function articlePositions(px: number, py: number, angle: number, count: number) 
 function Index() {
   const [topic, setTopic] = useState("");
   const [active, setActive] = useState(0);
+  const [zoom, setZoom] = useState(1);
 
   const mutation = useMutation({
     mutationFn: (t: string) => generateCluster({ data: { topic: t } }),
