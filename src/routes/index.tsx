@@ -5,15 +5,9 @@ import { generateCluster, generateGapCluster, type Cluster } from "@/lib/cluster
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Download, FileText, FileDown, ImagePlus, X, Target, Compass } from "lucide-react";
+import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Pencil, Target, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { exportMarkdown, exportPDF } from "@/lib/export-strategy";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { EditExportDialog } from "@/components/EditExportDialog";
 
 export const Route = createFileRoute("/")({
   head: () => ({
