@@ -836,6 +836,9 @@ function MindMap({
           const p = positions[i];
           const isActive = i === active;
           const color = PILLAR_COLORS[i % PILLAR_COLORS.length];
+          const score = pillarScores[i];
+          const isMatch = hasQuery && score > 0;
+          const isDimmed = hasQuery && score === 0;
           return (
             <button
               key={i}
@@ -844,12 +847,17 @@ function MindMap({
                 "absolute -translate-x-1/2 -translate-y-1/2 z-10 text-left transition-all",
                 "node-card px-4 py-3 w-[200px] hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-offset-2",
                 isActive ? "ring-2 shadow-[var(--shadow-glow)]" : "opacity-90 hover:opacity-100",
+                isMatch && "animate-node-pulse",
+                isDimmed && "opacity-30 grayscale",
               )}
               style={{
                 left: p.x,
                 top: p.y,
-                borderColor: isActive ? color : undefined,
+                borderColor: isMatch ? color : isActive ? color : undefined,
                 ...(isActive ? { ["--tw-ring-color" as never]: color } : {}),
+                ...(isMatch
+                  ? { ["--heat-color" as never]: `color-mix(in oklab, ${color} 70%, transparent)` }
+                  : {}),
               }}
             >
               <div className="flex items-center gap-2">
@@ -860,6 +868,11 @@ function MindMap({
                 <span className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
                   Pillar {i + 1}
                 </span>
+                {isMatch && (
+                  <span className="ml-auto text-[10px] font-mono tabular-nums text-foreground/80">
+                    {score}
+                  </span>
+                )}
               </div>
               <p className="text-sm font-semibold mt-1 leading-snug">{pillar.title}</p>
             </button>
@@ -875,16 +888,33 @@ function MindMap({
             cluster.pillars[active].articles.length,
           ).map((a, j) => {
             const color = PILLAR_COLORS[active % PILLAR_COLORS.length];
+            const isMatch = articleMatches.has(j);
+            const isDimmed = hasQuery && !isMatch;
             return (
               <div
                 key={j}
-                className="absolute -translate-x-1/2 -translate-y-1/2 z-10 node-card px-3 py-2 w-[180px] animate-in fade-in slide-in-from-center"
-                style={{ left: a.x, top: a.y, borderColor: `color-mix(in oklab, ${color} 40%, transparent)` }}
+                className={cn(
+                  "absolute -translate-x-1/2 -translate-y-1/2 z-10 node-card px-3 py-2 w-[180px] animate-in fade-in slide-in-from-center transition-all",
+                  isMatch && "animate-node-pulse ring-1",
+                  isDimmed && "opacity-30 grayscale",
+                )}
+                style={{
+                  left: a.x,
+                  top: a.y,
+                  borderColor: isMatch ? color : `color-mix(in oklab, ${color} 40%, transparent)`,
+                  ...(isMatch
+                    ? {
+                        ["--heat-color" as never]: `color-mix(in oklab, ${color} 70%, transparent)`,
+                        ["--tw-ring-color" as never]: color,
+                      }
+                    : {}),
+                }}
               >
                 <p className="text-xs leading-snug">{cluster.pillars[active].articles[j]}</p>
               </div>
             );
           })}
+
       </div>
     </div>
   );
