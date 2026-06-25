@@ -4,7 +4,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { generateCluster, type Cluster } from "@/lib/cluster.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Sparkles, Link2, KeyRound, Network } from "lucide-react";
+import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -69,6 +69,7 @@ function articlePositions(px: number, py: number, angle: number, count: number) 
 function Index() {
   const [topic, setTopic] = useState("");
   const [active, setActive] = useState(0);
+  const [zoom, setZoom] = useState(1);
 
   const mutation = useMutation({
     mutationFn: (t: string) => generateCluster({ data: { topic: t } }),
@@ -131,12 +132,14 @@ function Index() {
 
         {cluster && (
           <>
-            <section className="node-card relative overflow-hidden">
+            <section className={cn("node-card relative", zoom > 1 ? "overflow-auto" : "overflow-hidden")}>
               <MindMap
                 cluster={cluster}
                 positions={positions}
                 active={active}
                 onActiveChange={setActive}
+                zoom={zoom}
+                onZoomChange={setZoom}
               />
             </section>
 
@@ -295,21 +298,29 @@ function MindMap({
   positions,
   active,
   onActiveChange,
+  zoom,
+  onZoomChange,
 }: {
   cluster: Cluster;
   positions: { x: number; y: number; angle: number }[];
   active: number;
   onActiveChange: (i: number) => void;
+  zoom: number;
+  onZoomChange: (z: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+  const [fitScale, setFitScale] = useState(1);
+
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 3;
+  const STEP = 0.2;
 
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const update = () => {
       const w = el.clientWidth;
-      setScale(Math.min(1, w / STAGE.w));
+      setFitScale(Math.min(1, w / STAGE.w));
     };
     update();
     const ro = new ResizeObserver(update);
@@ -317,11 +328,54 @@ function MindMap({
     return () => ro.disconnect();
   }, []);
 
+  const finalScale = fitScale * zoom;
+
+  const zoomIn = () => onZoomChange(Math.min(MAX_ZOOM, zoom + STEP));
+  const zoomOut = () => onZoomChange(Math.max(MIN_ZOOM, zoom - STEP));
+  const resetZoom = () => onZoomChange(1);
+
   return (
-    <div ref={containerRef} className="relative w-full" style={{ height: STAGE.h * scale }}>
+    <div
+      ref={containerRef}
+      className="relative w-full"
+      style={{ height: STAGE.h * finalScale }}
+    >
+      <div className="absolute top-3 right-3 z-30 flex items-center gap-1 rounded-lg border border-border/60 bg-background/80 p-1 backdrop-blur-sm shadow-sm">
+        <button
+          type="button"
+          onClick={zoomOut}
+          disabled={zoom <= MIN_ZOOM}
+          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40 transition-colors"
+          aria-label="Zoom out"
+        >
+          <ZoomOut className="size-4" />
+        </button>
+        <span className="min-w-[3ch] px-1 text-center text-xs font-mono tabular-nums text-foreground/80">
+          {Math.round(zoom * 100)}%
+        </span>
+        <button
+          type="button"
+          onClick={zoomIn}
+          disabled={zoom >= MAX_ZOOM}
+          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40 transition-colors"
+          aria-label="Zoom in"
+        >
+          <ZoomIn className="size-4" />
+        </button>
+        <div className="mx-1 h-4 w-px bg-border/60" />
+        <button
+          type="button"
+          onClick={resetZoom}
+          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          aria-label="Reset zoom"
+        >
+          <RotateCcw className="size-4" />
+        </button>
+      </div>
+
       <div
         className="relative origin-top-left"
-        style={{ width: STAGE.w, height: STAGE.h, transform: `scale(${scale})` }}
+        style={{ width: STAGE.w, height: STAGE.h, transform: `scale(${finalScale})` }}
       >
         <svg
           width={STAGE.w}
