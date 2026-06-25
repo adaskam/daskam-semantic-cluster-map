@@ -489,6 +489,15 @@ function MindMap({
 
   const finalScale = fitScale * zoom;
 
+  // Semantic zoom levels: 0=galaxy (topic only), 1=cluster (pillars), 2=detail (articles)
+  const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+  const pillarAlpha = clamp01((finalScale - 0.45) / 0.25);
+  const articleAlpha = clamp01((finalScale - 1.0) / 0.3);
+  const galaxyAlpha = 1 - pillarAlpha;
+  const semanticLevel: 0 | 1 | 2 = articleAlpha > 0.5 ? 2 : pillarAlpha > 0.5 ? 1 : 0;
+  const totalArticles = cluster.pillars.reduce((acc, p) => acc + p.articles.length, 0);
+  const levelLabel = semanticLevel === 0 ? "Galaxy" : semanticLevel === 1 ? "Cluster" : "Detail";
+
   // Dynamic search across pillar content -> heat scores per pillar
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
@@ -708,6 +717,15 @@ function MindMap({
         Scroll to pan · ⌘/Ctrl + scroll to zoom · Space + drag
       </div>
 
+      <div className="pointer-events-none absolute bottom-3 right-3 z-30 flex items-center gap-2 rounded-md border border-border/50 bg-background/70 px-2 py-1 text-[10px] font-mono uppercase tracking-wider backdrop-blur-sm">
+        <span className="text-muted-foreground">Level</span>
+        <span className="text-foreground/90">{levelLabel}</span>
+        <span className="text-muted-foreground/60">·</span>
+        <span className={cn("size-1.5 rounded-full transition-colors", semanticLevel >= 0 ? "bg-primary" : "bg-muted")} />
+        <span className={cn("size-1.5 rounded-full transition-colors", semanticLevel >= 1 ? "bg-primary" : "bg-muted")} />
+        <span className={cn("size-1.5 rounded-full transition-colors", semanticLevel >= 2 ? "bg-primary" : "bg-muted")} />
+      </div>
+
 
       <div
         className="absolute top-0 left-0 origin-top-left select-none"
@@ -792,10 +810,32 @@ function MindMap({
                 fill="none"
                 stroke={`url(#line-${i % PILLAR_COLORS.length})`}
                 strokeWidth={isActive ? 2.5 : 1.5}
-                opacity={isActive ? 1 : 0.55}
+                opacity={(isActive ? 1 : 0.55) * pillarAlpha}
+                style={{ transition: "opacity 200ms ease" }}
               />
             );
           })}
+
+          {/* Galaxy-view satellite dots: pillars collapsed into colored points */}
+          {galaxyAlpha > 0.01 &&
+            cluster.pillars.map((_, i) => {
+              const p = positions[i];
+              const color = PILLAR_COLORS[i % PILLAR_COLORS.length];
+              const t = galaxyAlpha;
+              const gx = STAGE.cx + (p.x - STAGE.cx) * (0.25 + 0.75 * (1 - t));
+              const gy = STAGE.cy + (p.y - STAGE.cy) * (0.25 + 0.75 * (1 - t));
+              return (
+                <circle
+                  key={`gx-${i}`}
+                  cx={gx}
+                  cy={gy}
+                  r={6 + 6 * t}
+                  fill={color}
+                  opacity={0.85 * t}
+                  style={{ transition: "opacity 200ms ease, r 200ms ease" }}
+                />
+              );
+            })}
 
           {cluster.pillars.map((pillar, i) => {
             if (i !== active) return null;
@@ -811,7 +851,8 @@ function MindMap({
                 stroke={PILLAR_COLORS[i % PILLAR_COLORS.length]}
                 strokeWidth={1.2}
                 strokeDasharray="4 4"
-                opacity={0.7}
+                opacity={0.7 * articleAlpha}
+                style={{ transition: "opacity 200ms ease" }}
               />
             ));
           })}
@@ -822,11 +863,26 @@ function MindMap({
           className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
           style={{ left: STAGE.cx, top: STAGE.cy }}
         >
-          <div className="relative">
-            <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-2xl animate-pulse-ring" />
+          <div
+            className="relative"
+            style={{
+              transform: `scale(${1 + 0.35 * galaxyAlpha})`,
+              transition: "transform 220ms ease",
+            }}
+          >
+            <div
+              className="absolute inset-0 rounded-2xl bg-primary/30 blur-2xl animate-pulse-ring"
+              style={{ opacity: 0.6 + 0.4 * galaxyAlpha }}
+            />
             <div className="relative node-card px-6 py-4 max-w-[260px] text-center border-primary/50 shadow-[var(--shadow-glow)]">
               <p className="text-[10px] uppercase tracking-[0.2em] text-primary font-mono">Primary Topic</p>
               <p className="text-lg font-semibold mt-1 leading-tight">{cluster.primaryTopic}</p>
+              <p
+                className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mt-2"
+                style={{ opacity: galaxyAlpha, transition: "opacity 200ms ease" }}
+              >
+                {cluster.pillars.length} pillars · {totalArticles} articles
+              </p>
             </div>
           </div>
         </div>
@@ -839,6 +895,8 @@ function MindMap({
           const score = pillarScores[i];
           const isMatch = hasQuery && score > 0;
           const isDimmed = hasQuery && score === 0;
+          const baseOpacity = isActive ? 1 : 0.9;
+          const opacity = pillarAlpha * (isDimmed ? 0.3 : baseOpacity);
           return (
             <button
               key={i}
@@ -853,6 +911,10 @@ function MindMap({
               style={{
                 left: p.x,
                 top: p.y,
+                opacity,
+                pointerEvents: pillarAlpha < 0.2 ? "none" : "auto",
+                transform: `translate(-50%, -50%) scale(${0.7 + 0.3 * pillarAlpha})`,
+                transition: "opacity 200ms ease, transform 200ms ease",
                 borderColor: isMatch ? color : isActive ? color : undefined,
                 ...(isActive ? { ["--tw-ring-color" as never]: color } : {}),
                 ...(isMatch
@@ -901,6 +963,10 @@ function MindMap({
                 style={{
                   left: a.x,
                   top: a.y,
+                  opacity: articleAlpha * (isDimmed ? 0.3 : 1),
+                  pointerEvents: articleAlpha < 0.2 ? "none" : "auto",
+                  transform: `translate(-50%, -50%) scale(${0.6 + 0.4 * articleAlpha})`,
+                  transition: "opacity 220ms ease, transform 220ms ease",
                   borderColor: isMatch ? color : `color-mix(in oklab, ${color} 40%, transparent)`,
                   ...(isMatch
                     ? {
