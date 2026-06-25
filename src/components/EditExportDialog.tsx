@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, FileDown, FileText, Plus, Trash2, ImagePlus, X, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportMarkdown, exportPDF, type LogoPlacement, type LogoSize } from "@/lib/export-strategy";
+import { ClusterReport } from "@/components/ClusterReport";
 
 type Props = {
   open: boolean;
