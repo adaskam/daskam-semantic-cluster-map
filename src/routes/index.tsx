@@ -745,16 +745,25 @@ function SidePanel({
   cluster,
   active,
   onActiveChange,
+  logoDataUrl,
+  setLogoDataUrl,
+  logoPlacement,
+  setLogoPlacement,
+  logoSize,
+  setLogoSize,
 }: {
   cluster?: Cluster;
   active: number;
   onActiveChange: (i: number) => void;
+  logoDataUrl: string | null;
+  setLogoDataUrl: (v: string | null) => void;
+  logoPlacement: "left" | "center" | "right";
+  setLogoPlacement: (v: "left" | "center" | "right") => void;
+  logoSize: "s" | "m" | "l";
+  setLogoSize: (v: "s" | "m" | "l") => void;
 }) {
   const pillar = cluster?.pillars[active];
   const [exporting, setExporting] = useState(false);
-  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
-  const [logoPlacement, setLogoPlacement] = useState<"left" | "center" | "right">("left");
-  const [logoSize, setLogoSize] = useState<"s" | "m" | "l">("m");
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
