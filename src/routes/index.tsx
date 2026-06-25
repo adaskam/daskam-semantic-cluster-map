@@ -79,10 +79,19 @@ function Index() {
   const [topic, setTopic] = useState("");
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [cluster, setCluster] = useState<Cluster | undefined>(undefined);
+  const [view, setView] = useState<"map" | "document">("map");
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  const [logoPlacement, setLogoPlacement] = useState<"left" | "center" | "right">("left");
+  const [logoSize, setLogoSize] = useState<"s" | "m" | "l">("m");
 
   const topicMutation = useMutation({
     mutationFn: (t: string) => generateCluster({ data: { topic: t } }),
-    onSuccess: () => setActive(0),
+    onSuccess: (data) => {
+      setCluster(data);
+      setActive(0);
+      setView("document");
+    },
   });
 
   const onTopicSubmit = (e: React.FormEvent) => {
@@ -91,7 +100,6 @@ function Index() {
     topicMutation.mutate(topic.trim());
   };
 
-  const cluster: Cluster | undefined = topicMutation.data;
   const pillars = cluster?.pillars ?? [];
   const positions = useMemo(() => pillarPositions(pillars.length || 4), [pillars.length]);
 
@@ -140,15 +148,28 @@ function Index() {
 
         {cluster && (
           <>
-            <section className="node-card relative overflow-hidden">
-              <MindMap
-                cluster={cluster}
-                positions={positions}
-                active={active}
-                onActiveChange={setActive}
-                zoom={zoom}
-                onZoomChange={setZoom}
-              />
+            <section className="space-y-3">
+              <ViewToggle view={view} onChange={setView} />
+              {view === "map" ? (
+                <div className="node-card relative overflow-hidden">
+                  <MindMap
+                    cluster={cluster}
+                    positions={positions}
+                    active={active}
+                    onActiveChange={setActive}
+                    zoom={zoom}
+                    onZoomChange={setZoom}
+                  />
+                </div>
+              ) : (
+                <DocumentCanvas
+                  cluster={cluster}
+                  onChange={setCluster}
+                  logoDataUrl={logoDataUrl}
+                  logoPlacement={logoPlacement}
+                  logoSize={logoSize}
+                />
+              )}
             </section>
 
             <aside className="space-y-4">
@@ -156,11 +177,82 @@ function Index() {
                 cluster={cluster}
                 active={active}
                 onActiveChange={setActive}
+                logoDataUrl={logoDataUrl}
+                setLogoDataUrl={setLogoDataUrl}
+                logoPlacement={logoPlacement}
+                setLogoPlacement={setLogoPlacement}
+                logoSize={logoSize}
+                setLogoSize={setLogoSize}
               />
             </aside>
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+function ViewToggle({
+  view,
+  onChange,
+}: {
+  view: "map" | "document";
+  onChange: (v: "map" | "document") => void;
+}) {
+  return (
+    <div className="inline-flex rounded-lg border border-border/60 bg-background/60 p-1">
+      <button
+        type="button"
+        onClick={() => onChange("map")}
+        className={cn(
+          "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+          view === "map" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        <MapIcon className="size-3.5" /> Map view
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("document")}
+        className={cn(
+          "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+          view === "document" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        <FileEdit className="size-3.5" /> Editable document
+      </button>
+    </div>
+  );
+}
+
+function DocumentCanvas({
+  cluster,
+  onChange,
+  logoDataUrl,
+  logoPlacement,
+  logoSize,
+}: {
+  cluster: Cluster;
+  onChange: (c: Cluster) => void;
+  logoDataUrl: string | null;
+  logoPlacement: "left" | "center" | "right";
+  logoSize: "s" | "m" | "l";
+}) {
+  return (
+    <div className="rounded-lg bg-secondary/40 p-4 md:p-8 overflow-x-auto">
+      <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground mb-4">
+        Click any text to refine · Edits flow into the PDF export
+      </p>
+      <div className="mx-auto" style={{ width: 794 }}>
+        <ClusterReport
+          cluster={cluster}
+          onChange={onChange}
+          editable
+          logoDataUrl={logoDataUrl}
+          logoPlacement={logoPlacement}
+          logoSize={logoSize}
+        />
+      </div>
     </div>
   );
 }
