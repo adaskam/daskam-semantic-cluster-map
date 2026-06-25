@@ -74,15 +74,8 @@ function articlePositions(px: number, py: number, angle: number, count: number) 
   });
 }
 
-type Mode = "topic" | "gap";
-
 function Index() {
-  const [mode, setMode] = useState<Mode>("topic");
   const [topic, setTopic] = useState("");
-  const [url, setUrl] = useState("");
-  const [seedKeywords, setSeedKeywords] = useState("");
-  const [goals, setGoals] = useState("");
-  const [competitors, setCompetitors] = useState("");
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(1);
 
@@ -91,87 +84,54 @@ function Index() {
     onSuccess: () => setActive(0),
   });
 
-  const gapMutation = useMutation({
-    mutationFn: (vars: { url: string; keywords: string; goals: string; competitors: string }) =>
-      generateGapCluster({ data: vars }),
-    onSuccess: () => setActive(0),
-  });
-
-  const activeMutation = mode === "topic" ? topicMutation : gapMutation;
-  const cluster: Cluster | undefined = (topicMutation.data ?? gapMutation.data) as Cluster | undefined;
-  const lastData = mode === "topic" ? topicMutation.data : gapMutation.data;
-
   const onTopicSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (topic.trim().length < 2) return;
     topicMutation.mutate(topic.trim());
   };
 
-  const onGapSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (url.trim().length < 3 || seedKeywords.trim().length < 2) return;
-    gapMutation.mutate({
-      url: url.trim(),
-      keywords: seedKeywords.trim(),
-      goals: goals.trim(),
-      competitors: competitors.trim(),
-    });
-  };
-
+  const cluster: Cluster | undefined = topicMutation.data;
   const pillars = cluster?.pillars ?? [];
   const positions = useMemo(() => pillarPositions(pillars.length || 4), [pillars.length]);
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header
-        mode={mode}
         topic={topic}
         setTopic={setTopic}
         onSubmit={onTopicSubmit}
-        isPending={activeMutation.isPending}
-        showInput={mode === "topic"}
+        isPending={topicMutation.isPending}
       />
 
       <main
         className={cn(
           "flex-1 p-6 max-w-[1600px] w-full mx-auto",
-          lastData
+          cluster
             ? "grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6"
             : "flex flex-col items-center justify-start pt-8 lg:pt-14",
         )}
       >
-        {!lastData && !activeMutation.isPending && !activeMutation.isError && (
+        {!cluster && !topicMutation.isPending && !topicMutation.isError && (
           <HeroSection
-            mode={mode}
-            setMode={setMode}
             topic={topic}
             setTopic={setTopic}
-            url={url}
-            setUrl={setUrl}
-            seedKeywords={seedKeywords}
-            setSeedKeywords={setSeedKeywords}
-            goals={goals}
-            setGoals={setGoals}
-            competitors={competitors}
-            setCompetitors={setCompetitors}
             onTopicSubmit={onTopicSubmit}
-            onGapSubmit={onGapSubmit}
-            isPending={activeMutation.isPending}
+            isPending={topicMutation.isPending}
           />
         )}
 
-        {activeMutation.isPending && (
+        {topicMutation.isPending && (
           <section className="node-card relative overflow-hidden min-h-[760px] w-full">
-            <LoadingState topic={mode === "topic" ? topic : `${url} — intent gap analysis`} />
+            <LoadingState topic={topic} />
           </section>
         )}
 
-        {activeMutation.isError && !cluster && (
+        {topicMutation.isError && !cluster && (
           <section className="node-card relative overflow-hidden min-h-[760px] w-full grid place-items-center p-8 text-center">
             <div className="max-w-sm">
               <p className="text-destructive font-medium mb-2">Couldn't generate cluster</p>
               <p className="text-sm text-muted-foreground">
-                {(activeMutation.error as Error)?.message || "Try again in a moment."}
+                {(topicMutation.error as Error)?.message || "Try again in a moment."}
               </p>
             </div>
           </section>
@@ -203,6 +163,7 @@ function Index() {
     </div>
   );
 }
+
 
 
 function Header({
