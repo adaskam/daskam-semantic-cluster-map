@@ -362,13 +362,15 @@ function PreviewPane({
   logoSize: LogoSize;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.5);
+  const [innerH, setInnerH] = useState(0);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const update = () => {
-      const w = el.clientWidth - 32; // padding
+      const w = el.clientWidth - 32;
       setScale(Math.min(1, Math.max(0.25, w / REPORT_WIDTH)));
     };
     update();
@@ -376,6 +378,15 @@ function PreviewPane({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setInnerH(el.scrollHeight));
+    ro.observe(el);
+    setInnerH(el.scrollHeight);
+    return () => ro.disconnect();
+  }, [cluster, logoDataUrl, logoPlacement, logoSize]);
 
   return (
     <div className="hidden md:flex flex-col bg-[#e7e1d2]/40 border-l border-border/60 min-h-0">
@@ -389,15 +400,21 @@ function PreviewPane({
         <div
           style={{
             width: REPORT_WIDTH * scale,
+            height: innerH * scale,
             margin: "0 auto",
+            position: "relative",
           }}
         >
           <div
+            ref={innerRef}
             style={{
               width: REPORT_WIDTH,
               transform: `scale(${scale})`,
               transformOrigin: "top left",
               boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              position: "absolute",
+              top: 0,
+              left: 0,
             }}
           >
             <ClusterReport
@@ -412,6 +429,7 @@ function PreviewPane({
     </div>
   );
 }
+
 
 
 function Label({ children, className }: { children: React.ReactNode; className?: string }) {
