@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { generateCluster, type Cluster } from "@/lib/cluster.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +40,7 @@ const EXAMPLE_TOPICS = [
   "AI for Healthcare",
 ];
 
-const STAGE = { w: 1100, h: 760, cx: 550, cy: 380 };
+const STAGE = { w: 1240, h: 940, cx: 620, cy: 470 };
 
 function pillarPositions(n: number) {
   const radius = 250;
@@ -131,7 +131,7 @@ function Index() {
 
         {cluster && (
           <>
-            <section className="node-card relative overflow-hidden min-h-[760px]">
+            <section className="node-card relative overflow-hidden">
               <MindMap
                 cluster={cluster}
                 positions={positions}
@@ -301,11 +301,27 @@ function MindMap({
   active: number;
   onActiveChange: (i: number) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth;
+      setScale(Math.min(1, w / STAGE.w));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className="relative w-full h-full overflow-auto">
+    <div ref={containerRef} className="relative w-full" style={{ height: STAGE.h * scale }}>
       <div
-        className="relative mx-auto"
-        style={{ width: STAGE.w, height: STAGE.h }}
+        className="relative origin-top-left"
+        style={{ width: STAGE.w, height: STAGE.h, transform: `scale(${scale})` }}
       >
         <svg
           width={STAGE.w}
