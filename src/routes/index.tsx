@@ -108,7 +108,7 @@ function Index() {
       <Header
         showNewMap={!!cluster}
         onNewMap={() => {
-          setCluster(null);
+          setCluster(undefined);
           topicMutation.reset();
         }}
       />
