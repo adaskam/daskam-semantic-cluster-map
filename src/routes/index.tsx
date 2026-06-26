@@ -264,14 +264,148 @@ function Header() {
           <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center">
             <Network className="size-5 text-primary-foreground" />
           </div>
+function Header({
+  history,
+  onRestore,
+  onRemove,
+  onClear,
+  showNewSearch,
+  onNewSearch,
+}: {
+  history: HistoryItem[];
+  onRestore: (item: HistoryItem) => void;
+  onRemove: (id: string) => void;
+  onClear: () => void;
+  showNewSearch: boolean;
+  onNewSearch: () => void;
+}) {
+  return (
+    <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
+      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center gap-4">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center">
+            <Network className="size-5 text-primary-foreground" />
+          </div>
           <div className="hidden sm:block">
             <h1 className="text-base font-semibold leading-none">Semantic Cluster Map</h1>
             <p className="text-xs text-muted-foreground mt-1">A cartographer for your keyword strategy</p>
           </div>
         </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          {showNewSearch && (
+            <Button variant="outline" size="sm" onClick={onNewSearch} className="h-9">
+              <Sparkles className="size-4" />
+              New search
+            </Button>
+          )}
+          <HistoryMenu items={history} onRestore={onRestore} onRemove={onRemove} onClear={onClear} />
+        </div>
       </div>
     </header>
   );
+}
+
+function HistoryMenu({
+  items,
+  onRestore,
+  onRemove,
+  onClear,
+}: {
+  items: HistoryItem[];
+  onRestore: (item: HistoryItem) => void;
+  onRemove: (id: string) => void;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 relative">
+          <History className="size-4" />
+          History
+          {items.length > 0 && (
+            <span className="ml-1 text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground">
+              {items.length}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-[360px] p-0">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+          <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
+            Recent searches
+          </p>
+          {items.length > 0 && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-[11px] text-muted-foreground hover:text-destructive transition-colors inline-flex items-center gap-1"
+            >
+              <Trash2 className="size-3" /> Clear all
+            </button>
+          )}
+        </div>
+        {items.length === 0 ? (
+          <div className="px-3 py-8 text-center">
+            <p className="text-sm text-muted-foreground">No searches yet.</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              Your generated cluster maps will appear here.
+            </p>
+          </div>
+        ) : (
+          <ul className="max-h-[420px] overflow-auto py-1">
+            {items.map((item) => (
+              <li key={item.id} className="group flex items-stretch gap-1 px-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRestore(item);
+                    setOpen(false);
+                  }}
+                  className="flex-1 text-left px-2 py-2 rounded-md hover:bg-secondary/60 transition-colors min-w-0"
+                >
+                  <div className="flex items-center gap-2">
+                    {item.mode === "topic" ? (
+                      <Sparkles className="size-3.5 text-primary shrink-0" />
+                    ) : (
+                      <Target className="size-3.5 text-accent shrink-0" />
+                    )}
+                    <span className="text-sm font-medium truncate">{item.label}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                    <span>{item.mode === "topic" ? "Topic Map" : "Intent Gap"}</span>
+                    <span>·</span>
+                    <span>{formatRelative(item.createdAt)}</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRemove(item.id)}
+                  aria-label="Remove from history"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity px-2 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function formatRelative(ts: number) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(ts).toLocaleDateString();
 }
 
 function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
