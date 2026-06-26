@@ -5,9 +5,11 @@ import { generateCluster, generateGapCluster, type Cluster } from "@/lib/cluster
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Pencil, Target, Compass, Search, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Pencil, Target, Compass, Search, X, History, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EditExportDialog } from "@/components/EditExportDialog";
+import { useSearchHistory, type HistoryItem } from "@/lib/search-history";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -79,31 +81,61 @@ function Index() {
   const [competitors, setCompetitors] = useState("");
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [restored, setRestored] = useState<HistoryItem | null>(null);
+
+  const history = useSearchHistory();
 
   const topicMutation = useMutation({
     mutationFn: (t: string) => generateCluster({ data: { topic: t } }),
-    onSuccess: () => setActive(0),
+    onSuccess: (data, variables) => {
+      setActive(0);
+      setRestored(null);
+      history.add({
+        mode: "topic",
+        label: variables,
+        inputs: { topic: variables },
+        cluster: data as Cluster,
+      });
+    },
   });
 
   const gapMutation = useMutation({
     mutationFn: (vars: { url: string; keywords: string; goals: string; competitors: string }) =>
       generateGapCluster({ data: vars }),
-    onSuccess: () => setActive(0),
+    onSuccess: (data, variables) => {
+      setActive(0);
+      setRestored(null);
+      history.add({
+        mode: "gap",
+        label: variables.url,
+        inputs: {
+          url: variables.url,
+          seedKeywords: variables.keywords,
+          goals: variables.goals,
+          competitors: variables.competitors,
+        },
+        cluster: data as Cluster,
+      });
+    },
   });
 
   const activeMutation = mode === "topic" ? topicMutation : gapMutation;
-  const cluster: Cluster | undefined = (topicMutation.data ?? gapMutation.data) as Cluster | undefined;
-  const lastData = mode === "topic" ? topicMutation.data : gapMutation.data;
+  const mutationData = mode === "topic" ? topicMutation.data : gapMutation.data;
+  const cluster: Cluster | undefined =
+    (restored?.cluster ?? topicMutation.data ?? gapMutation.data) as Cluster | undefined;
+  const lastData = restored?.cluster ?? mutationData;
 
   const onTopicSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (topic.trim().length < 2) return;
+    setRestored(null);
     topicMutation.mutate(topic.trim());
   };
 
   const onGapSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (url.trim().length < 3 || seedKeywords.trim().length < 2) return;
+    setRestored(null);
     gapMutation.mutate({
       url: url.trim(),
       keywords: seedKeywords.trim(),
@@ -112,12 +144,44 @@ function Index() {
     });
   };
 
+  const onRestore = (item: HistoryItem) => {
+    setMode(item.mode);
+    setRestored(item);
+    setActive(0);
+    setZoom(1);
+    if (item.mode === "topic") {
+      setTopic(item.inputs.topic ?? "");
+      topicMutation.reset();
+    } else {
+      setUrl(item.inputs.url ?? "");
+      setSeedKeywords(item.inputs.seedKeywords ?? "");
+      setGoals(item.inputs.goals ?? "");
+      setCompetitors(item.inputs.competitors ?? "");
+      gapMutation.reset();
+    }
+  };
+
+  const onNewSearch = () => {
+    setRestored(null);
+    topicMutation.reset();
+    gapMutation.reset();
+    setActive(0);
+    setZoom(1);
+  };
+
   const pillars = cluster?.pillars ?? [];
   const positions = useMemo(() => pillarPositions(pillars.length || 4), [pillars.length]);
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <Header
+        history={history.items}
+        onRestore={onRestore}
+        onRemove={history.remove}
+        onClear={history.clear}
+        showNewSearch={!!lastData}
+        onNewSearch={onNewSearch}
+      />
 
       <main
         className={cn(
@@ -192,7 +256,21 @@ function Index() {
 }
 
 
-function Header() {
+function Header({
+  history,
+  onRestore,
+  onRemove,
+  onClear,
+  showNewSearch,
+  onNewSearch,
+}: {
+  history: HistoryItem[];
+  onRestore: (item: HistoryItem) => void;
+  onRemove: (id: string) => void;
+  onClear: () => void;
+  showNewSearch: boolean;
+  onNewSearch: () => void;
+}) {
   return (
     <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
       <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center gap-4">
@@ -205,9 +283,121 @@ function Header() {
             <p className="text-xs text-muted-foreground mt-1">A cartographer for your keyword strategy</p>
           </div>
         </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          {showNewSearch && (
+            <Button variant="outline" size="sm" onClick={onNewSearch} className="h-9">
+              <Sparkles className="size-4" />
+              New search
+            </Button>
+          )}
+          <HistoryMenu items={history} onRestore={onRestore} onRemove={onRemove} onClear={onClear} />
+        </div>
       </div>
     </header>
   );
+}
+
+function HistoryMenu({
+  items,
+  onRestore,
+  onRemove,
+  onClear,
+}: {
+  items: HistoryItem[];
+  onRestore: (item: HistoryItem) => void;
+  onRemove: (id: string) => void;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 relative">
+          <History className="size-4" />
+          History
+          {items.length > 0 && (
+            <span className="ml-1 text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground">
+              {items.length}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-[360px] p-0">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
+          <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted-foreground">
+            Recent searches
+          </p>
+          {items.length > 0 && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-[11px] text-muted-foreground hover:text-destructive transition-colors inline-flex items-center gap-1"
+            >
+              <Trash2 className="size-3" /> Clear all
+            </button>
+          )}
+        </div>
+        {items.length === 0 ? (
+          <div className="px-3 py-8 text-center">
+            <p className="text-sm text-muted-foreground">No searches yet.</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              Your generated cluster maps will appear here.
+            </p>
+          </div>
+        ) : (
+          <ul className="max-h-[420px] overflow-auto py-1">
+            {items.map((item) => (
+              <li key={item.id} className="group flex items-stretch gap-1 px-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRestore(item);
+                    setOpen(false);
+                  }}
+                  className="flex-1 text-left px-2 py-2 rounded-md hover:bg-secondary/60 transition-colors min-w-0"
+                >
+                  <div className="flex items-center gap-2">
+                    {item.mode === "topic" ? (
+                      <Sparkles className="size-3.5 text-primary shrink-0" />
+                    ) : (
+                      <Target className="size-3.5 text-accent shrink-0" />
+                    )}
+                    <span className="text-sm font-medium truncate">{item.label}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                    <span>{item.mode === "topic" ? "Topic Map" : "Intent Gap"}</span>
+                    <span>·</span>
+                    <span>{formatRelative(item.createdAt)}</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRemove(item.id)}
+                  aria-label="Remove from history"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity px-2 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function formatRelative(ts: number) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(ts).toLocaleDateString();
 }
 
 function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
