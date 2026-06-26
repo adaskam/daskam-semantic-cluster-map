@@ -81,37 +81,92 @@ function Index() {
   const [competitors, setCompetitors] = useState("");
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [restored, setRestored] = useState<HistoryItem | null>(null);
+
+  const history = useSearchHistory();
 
   const topicMutation = useMutation({
     mutationFn: (t: string) => generateCluster({ data: { topic: t } }),
-    onSuccess: () => setActive(0),
+    onSuccess: (data, variables) => {
+      setActive(0);
+      setRestored(null);
+      history.add({
+        mode: "topic",
+        label: variables,
+        inputs: { topic: variables },
+        cluster: data as Cluster,
+      });
+    },
   });
 
   const gapMutation = useMutation({
     mutationFn: (vars: { url: string; keywords: string; goals: string; competitors: string }) =>
       generateGapCluster({ data: vars }),
-    onSuccess: () => setActive(0),
+    onSuccess: (data, variables) => {
+      setActive(0);
+      setRestored(null);
+      history.add({
+        mode: "gap",
+        label: variables.url,
+        inputs: {
+          url: variables.url,
+          seedKeywords: variables.keywords,
+          goals: variables.goals,
+          competitors: variables.competitors,
+        },
+        cluster: data as Cluster,
+      });
+    },
   });
 
   const activeMutation = mode === "topic" ? topicMutation : gapMutation;
-  const cluster: Cluster | undefined = (topicMutation.data ?? gapMutation.data) as Cluster | undefined;
-  const lastData = mode === "topic" ? topicMutation.data : gapMutation.data;
+  const mutationData = mode === "topic" ? topicMutation.data : gapMutation.data;
+  const cluster: Cluster | undefined =
+    (restored?.cluster ?? topicMutation.data ?? gapMutation.data) as Cluster | undefined;
+  const lastData = restored?.cluster ?? mutationData;
 
   const onTopicSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (topic.trim().length < 2) return;
+    setRestored(null);
     topicMutation.mutate(topic.trim());
   };
 
   const onGapSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (url.trim().length < 3 || seedKeywords.trim().length < 2) return;
+    setRestored(null);
     gapMutation.mutate({
       url: url.trim(),
       keywords: seedKeywords.trim(),
       goals: goals.trim(),
       competitors: competitors.trim(),
     });
+  };
+
+  const onRestore = (item: HistoryItem) => {
+    setMode(item.mode);
+    setRestored(item);
+    setActive(0);
+    setZoom(1);
+    if (item.mode === "topic") {
+      setTopic(item.inputs.topic ?? "");
+      topicMutation.reset();
+    } else {
+      setUrl(item.inputs.url ?? "");
+      setSeedKeywords(item.inputs.seedKeywords ?? "");
+      setGoals(item.inputs.goals ?? "");
+      setCompetitors(item.inputs.competitors ?? "");
+      gapMutation.reset();
+    }
+  };
+
+  const onNewSearch = () => {
+    setRestored(null);
+    topicMutation.reset();
+    gapMutation.reset();
+    setActive(0);
+    setZoom(1);
   };
 
   const pillars = cluster?.pillars ?? [];
