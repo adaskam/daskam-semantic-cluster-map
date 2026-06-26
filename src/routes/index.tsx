@@ -256,14 +256,6 @@ function Index() {
 }
 
 
-function Header() {
-  return (
-    <header className="border-b border-border/60 backdrop-blur-sm sticky top-0 z-30 bg-background/70">
-      <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center gap-4">
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center">
-            <Network className="size-5 text-primary-foreground" />
-          </div>
 function Header({
   history,
   onRestore,
