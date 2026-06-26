@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { generateCluster, generateGapCluster, generateTextCluster, type Cluster } from "@/lib/cluster.functions";
+import { generateCluster, generateGapCluster, type Cluster } from "@/lib/cluster.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Pencil, Target, Compass, Search, X, FileText } from "lucide-react";
+import { Loader2, Sparkles, Link2, KeyRound, Network, ZoomIn, ZoomOut, RotateCcw, Pencil, Target, Compass, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EditExportDialog } from "@/components/EditExportDialog";
-
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -69,7 +68,7 @@ function articlePositions(px: number, py: number, angle: number, count: number) 
   });
 }
 
-type Mode = "topic" | "gap" | "text";
+type Mode = "topic" | "gap";
 
 function Index() {
   const [mode, setMode] = useState<Mode>("topic");
@@ -78,8 +77,6 @@ function Index() {
   const [seedKeywords, setSeedKeywords] = useState("");
   const [goals, setGoals] = useState("");
   const [competitors, setCompetitors] = useState("");
-  const [textLabel, setTextLabel] = useState("");
-  const [textBlobs, setTextBlobs] = useState("");
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(1);
 
@@ -94,18 +91,9 @@ function Index() {
     onSuccess: () => setActive(0),
   });
 
-  const textMutation = useMutation({
-    mutationFn: (vars: { label: string; texts: string }) =>
-      generateTextCluster({ data: vars }),
-    onSuccess: () => setActive(0),
-  });
-
-  const activeMutation =
-    mode === "topic" ? topicMutation : mode === "gap" ? gapMutation : textMutation;
-  const cluster: Cluster | undefined =
-    (topicMutation.data ?? gapMutation.data ?? textMutation.data) as Cluster | undefined;
-  const lastData =
-    mode === "topic" ? topicMutation.data : mode === "gap" ? gapMutation.data : textMutation.data;
+  const activeMutation = mode === "topic" ? topicMutation : gapMutation;
+  const cluster: Cluster | undefined = (topicMutation.data ?? gapMutation.data) as Cluster | undefined;
+  const lastData = mode === "topic" ? topicMutation.data : gapMutation.data;
 
   const onTopicSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,13 +111,6 @@ function Index() {
       competitors: competitors.trim(),
     });
   };
-
-  const onTextSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (textBlobs.trim().length < 10) return;
-    textMutation.mutate({ label: textLabel.trim(), texts: textBlobs.trim() });
-  };
-
 
   const pillars = cluster?.pillars ?? [];
   const positions = useMemo(() => pillarPositions(pillars.length || 4), [pillars.length]);
@@ -160,31 +141,17 @@ function Index() {
             setGoals={setGoals}
             competitors={competitors}
             setCompetitors={setCompetitors}
-            textLabel={textLabel}
-            setTextLabel={setTextLabel}
-            textBlobs={textBlobs}
-            setTextBlobs={setTextBlobs}
             onTopicSubmit={onTopicSubmit}
             onGapSubmit={onGapSubmit}
-            onTextSubmit={onTextSubmit}
             isPending={activeMutation.isPending}
           />
         )}
 
         {activeMutation.isPending && (
           <section className="node-card relative overflow-hidden min-h-[760px] w-full">
-            <LoadingState
-              topic={
-                mode === "topic"
-                  ? topic
-                  : mode === "gap"
-                    ? `${url} — intent gap analysis`
-                    : textLabel || "your text corpus"
-              }
-            />
+            <LoadingState topic={mode === "topic" ? topic : `${url} — intent gap analysis`} />
           </section>
         )}
-
 
         {activeMutation.isError && !cluster && (
           <section className="node-card relative overflow-hidden min-h-[760px] w-full grid place-items-center p-8 text-center">
@@ -247,10 +214,9 @@ function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void })
   const tabs: { id: Mode; label: string; icon: typeof Sparkles; sub: string }[] = [
     { id: "topic", label: "Topic Map", icon: Sparkles, sub: "From seed keywords" },
     { id: "gap", label: "Intent Gap Analysis", icon: Target, sub: "From a URL + seed keywords" },
-    { id: "text", label: "Live Text Mapping", icon: FileText, sub: "Cluster your own text blobs" },
   ];
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1 rounded-xl border border-border/60 bg-secondary/30">
+    <div className="grid grid-cols-2 gap-2 p-1 rounded-xl border border-border/60 bg-secondary/30">
       {tabs.map((t) => {
         const Icon = t.icon;
         const active = mode === t.id;
@@ -278,7 +244,6 @@ function ModeTabs({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void })
   );
 }
 
-
 function HeroSection({
   mode,
   setMode,
@@ -292,13 +257,8 @@ function HeroSection({
   setGoals,
   competitors,
   setCompetitors,
-  textLabel,
-  setTextLabel,
-  textBlobs,
-  setTextBlobs,
   onTopicSubmit,
   onGapSubmit,
-  onTextSubmit,
   isPending,
 }: {
   mode: Mode;
@@ -313,51 +273,32 @@ function HeroSection({
   setGoals: (v: string) => void;
   competitors: string;
   setCompetitors: (v: string) => void;
-  textLabel: string;
-  setTextLabel: (v: string) => void;
-  textBlobs: string;
-  setTextBlobs: (v: string) => void;
   onTopicSubmit: (e: React.FormEvent) => void;
   onGapSubmit: (e: React.FormEvent) => void;
-  onTextSubmit: (e: React.FormEvent) => void;
   isPending: boolean;
 }) {
-  const blobCount = textBlobs
-    .split(/\n\s*\n+|\n+/)
-    .map((s) => s.trim())
-    .filter(Boolean).length;
-
   return (
     <div className="w-full max-w-2xl mx-auto text-center">
       <div className="size-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center mb-6 animate-pulse-ring">
         {mode === "topic" ? (
           <Network className="size-10 text-primary" />
-        ) : mode === "gap" ? (
-          <Compass className="size-10 text-primary" />
         ) : (
-          <FileText className="size-10 text-primary" />
+          <Compass className="size-10 text-primary" />
         )}
       </div>
 
       <h2 className="text-3xl md:text-4xl font-semibold text-glow">
-        {mode === "topic"
-          ? "Map a content universe"
-          : mode === "gap"
-            ? "Find your intent gaps"
-            : "Cluster your own text"}
+        {mode === "topic" ? "Map a content universe" : "Find your intent gaps"}
       </h2>
       <p className="text-base text-muted-foreground mt-3 max-w-md mx-auto">
         {mode === "topic"
           ? "Enter a primary topic and we'll generate a complete semantic content cluster: pillars, article ideas, keywords, and internal linking strategy."
-          : mode === "gap"
-            ? "Add your site, seed keywords, goals, and competitors. We'll map content opportunities based on search intent gaps."
-            : "Paste paragraphs, tweets, reviews, or any text blobs (one per line or separated by blank lines). We'll group them by semantic similarity and place them on the map."}
+          : "Add your site, seed keywords, goals, and competitors. We'll map content opportunities based on search intent gaps."}
       </p>
 
       <div className="mt-6 text-left">
         <ModeTabs mode={mode} setMode={setMode} />
       </div>
-
 
       {mode === "topic" ? (
         <form onSubmit={onTopicSubmit} className="mt-6 flex flex-col gap-3">
@@ -404,7 +345,7 @@ function HeroSection({
             </div>
           </div>
         </form>
-      ) : mode === "gap" ? (
+      ) : (
         <form onSubmit={onGapSubmit} className="mt-6 flex flex-col gap-4 text-left">
           <div className="grid gap-2">
             <label htmlFor="gap-url" className="text-sm font-medium text-muted-foreground">
@@ -470,56 +411,9 @@ function HeroSection({
             )}
           </Button>
         </form>
-      ) : (
-        <form onSubmit={onTextSubmit} className="mt-6 flex flex-col gap-4 text-left">
-          <div className="grid gap-2">
-            <label htmlFor="text-label" className="text-sm font-medium text-muted-foreground">
-              Corpus label <span className="text-muted-foreground/60 font-normal">(optional)</span>
-            </label>
-            <Input
-              id="text-label"
-              value={textLabel}
-              onChange={(e) => setTextLabel(e.target.value)}
-              placeholder="e.g. Q3 user interview notes, Twitter mentions, product reviews"
-              className="h-12 bg-input border-border focus-visible:ring-primary"
-              disabled={isPending}
-            />
-          </div>
-          <div className="grid gap-2">
-            <label htmlFor="text-blobs" className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-              <span>
-                Text snippets <span className="text-destructive">*</span>
-              </span>
-              <span className="text-xs text-muted-foreground/70">{blobCount} snippet{blobCount === 1 ? "" : "s"} detected</span>
-            </label>
-            <Textarea
-              id="text-blobs"
-              value={textBlobs}
-              onChange={(e) => setTextBlobs(e.target.value)}
-              placeholder={"Paste paragraphs, tweets, reviews, or notes.\n\nSeparate each snippet with a blank line — or just one per line.\n\nUp to 80 snippets will be clustered."}
-              className="min-h-[220px] bg-input border-border focus-visible:ring-primary font-mono text-sm"
-              disabled={isPending}
-            />
-          </div>
-          <Button
-            type="submit"
-            disabled={isPending || blobCount < 4}
-            className="h-14 px-8 text-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
-          >
-            {isPending ? (
-              <><Loader2 className="size-5 animate-spin" /> Clustering text…</>
-            ) : (
-              <><FileText className="size-5 mr-1" /> Cluster text semantically</>
-            )}
-          </Button>
-          {blobCount > 0 && blobCount < 4 && (
-            <p className="text-xs text-muted-foreground text-center">Add at least 4 snippets to cluster.</p>
-          )}
-        </form>
       )}
     </div>
   );
-
 }
 
 
