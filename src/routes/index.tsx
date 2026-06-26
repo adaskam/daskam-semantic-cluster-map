@@ -174,7 +174,14 @@ function Index() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <Header
+        history={history.items}
+        onRestore={onRestore}
+        onRemove={history.remove}
+        onClear={history.clear}
+        showNewSearch={!!lastData}
+        onNewSearch={onNewSearch}
+      />
 
       <main
         className={cn(
